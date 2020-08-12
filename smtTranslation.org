@@ -3,7 +3,13 @@
 #+LATEX_CLASS: article
 #+LATEX_CLASS_OPTIONS: [a4paper,11pt]
 #+LATEX_HEADER: \usepackage[margin=1in]{geometry}
-
+#+LATEX_HEADER: \usepackage{multirow}
+#+LATEX_HEADER: \usepackage{booktabs}
+#+LATEX_HEADER: \usepackage{amsmath}
+#+LATEX_HEADER: \newcommand*\BitAnd{\mathbin{\&}}
+#+LATEX_HEADER: \newcommand*\BitOr{\mathbin{|}}
+#+LATEX_HEADER: \newcommand*\ShiftLeft{\ll}
+#+LATEX_HEADER: \newcommand*\ShiftRight{\gg}
 * Introduction
 Timed Automata are a commonly used representation for modelling the behavior of
 systems with real-time semantics.
@@ -68,13 +74,13 @@ Let \(AP\) be a set of atomic propositions, and let \(Act\) be a set of events.
 In addition we define a null event \(\tau\). \(Act_{\tau}\) is the set \(Act
 \cup \{\tau\}\). Let \(X\) be a finite set of clocks, and \(Int\) a finite set
 of integer-valued variables. \(\Gamma(X)\) is the set of clock contraints, where
-a clock constraint \(\gamma\) is a relation \(x \sim c\ |\ \neg \gamma\ |\
+a clock constraint \(\gamma\) is a relation \(x \sim c \BitOr \neg \gamma\BitOr
 \gamma \land \gamma\), where \(x \in X\), \(\sim \in \{<,=\}\), and \(c \in
 \mathbb{N}\). \(Assign(Int)\) is a set of variable assignments of the form \(y
-:= exp\), where \(exp := exp + exp\ |\ exp - exp\ |\ exp \times exp\ |\ exp \div
-exp\ |\ n\ |\ c\), \(y \in Int\) and \(c \in \mathbb{Z}\). \(\Gamma(Int)\) is
+:= exp\), where \(exp := exp + exp\BitOr exp - exp\BitOr exp \times exp\BitOr exp \div
+exp\BitOr n\BitOr c\), \(y \in Int\) and \(c \in \mathbb{Z}\). \(\Gamma(Int)\) is
 the set of integer variable constraints, where a variable constraint \(\gamma\)
-is defined as \(\gamma := n \sim c\ |\ n \sim n'\ |\ \neg \gamma\ |\ \gamma
+is defined as \(\gamma := n \sim c\BitOr n \sim n'\BitOr \neg \gamma\BitOr \gamma
 \land \gamma\), where \(n\) and \(n'\) are integer variables, \(c \in
 \mathbb{Z}\), and \(\sim \in \{<,=\}\). A Timed Automaton with variables is
 defined as the tuple \(\mathcal{A} = <AP,X, Act_{\tau}, Int, Q, q_0, v_{var}^0,
@@ -97,26 +103,27 @@ performed on every element of the vector.
 
 When encoding the constraints of the system, it is convienent to write that a
 constraint will hold over every discrete time position in the trace. As an
-example, consider a state with an invariant \(x_i < 5\). When formalizing the
-constraints, it would be simpler to have a formula of the type \(state
+example, consider a transition with an guard \(x_i < 5\). When formalizing the
+constraints, it would be simpler to have a formula of the type \(transition
 \rightarrow constraint\) that we can assert over every time position. Therefore
 we will use BitVectors of length \(k+2\), where each position in the BitVector
 represents the formula at a different moment in time.
 
-This encoding, while convienent, is not very efficient. Since only one state is
-active at a time, it is more compact to store the currently active state as a
-binary number over \(\lceil\log_2 |Q|\rceil\) bits, where \(Q\) is the set of
-states. Therefore we will create \(\lceil\log_2 |Q|\rceil\) BitVectors of length
-\(k+2\) to represent the state of the TA over time. In order to be able to
-convienently refer to individual elements of the set, we will define aliases
-which refer to unique combinations of the BitVectors. This will give us the
-convience of the individually-named BitVectors while retaining the efficiency of
-the compact approach. This method will be formallized below for the encoding of
-the states, transitions, and variables of the Timed Automata.
+This encoding, while convienent, is not very efficient. Since only one
+transition is active at a time, it is more compact to store the currently active
+transition as a binary number over \(\lceil\log_2 |T|\rceil\) bits, where \(T\)
+is the set of transitions. Therefore we will create \(\lceil\log_2 |T|\rceil\)
+BitVectors of length \(k+2\) to represent the active transition of the TA over
+time. In order to be able to convienently refer to individual elements of the
+set, we will define aliases which refer to unique combinations of the
+BitVectors. This will give us the convience of the individually-named BitVectors
+while retaining the efficiency of the compact approach. This method will be
+formalized below for the encoding of the states, transitions, and variables of
+the Timed Automata.
 
 For a model with a time bound of k, and a timed automaton with n distinct
-states, we represent the state of the automaton at different time instances as
-follows:
+transitions, we represent the active transition of the automaton at different
+time instances as follows:
 
 //#+ATTR_LATEX: :caption Representation of n elements over time with \log_2 n BitVectors
 |                                 | k+1, \(\ldots\), 1, 0                                           |
@@ -127,23 +134,6 @@ follows:
 | \(\lceil \log_2 n_i \rceil -1\) | \(\overleftarrow{sb_{i, \lceil \log_2 n_i \rceil -1}}_{[k+2]}\) |
 
 
-** States
-
-For each TA \(\mathcal{A}_l \in \mathcal{A}\), let \(O: Q \rightarrow
-\mathbb{N}\) be a bijective function mapping each state to a natural number less
-than \(|Q|\). We define BitVectors \(\{\overleftarrow{sb_1},
-\overleftarrow{sb_2}, \ldots, \overleftarrow{sb_{\lceil\log_2 |Q|\rceil}}\}\),
-each of length \(k+2\). The BitVector for the individual state is then defined
-as \(\overleftarrow{state_q}_{[k+2]} := \big\&_{i=1}^{\lceil\log_2 |Q|\rceil}
-N_q(sb_i)\), where \(N_q(sb_i)\) returns \(sb_i\) if the \(i\)th bit in the base
-two representation of \(O(q)\) is 1, and returns \(\neg sb_i\) otherwise.
-
-For clarity, let us consider an example TA with \(\lceil\log_2 |Q|\rceil = 5\)
-and a state \(q \in Q\) with \(O(q) = 5\). The base two representation of 5 is
-\(00101\), and therefore \(\overleftarrow{state_q}_{[k+2]}\) is equivalent to
-\((\neg sb_5 \mathbin{\&} \neg sb_4 \mathbin{\&} sb_3 \mathbin{\&} \neg sb_2
-\mathbin{\&} sb_1)\).
-
 ** Transitions
 
 In the traditional description of Timed Automata, a TA that does not perform a
@@ -153,17 +143,40 @@ the set \(T\). In our encoding it is convienent to explicitly add a null
 transition for each state \(q \in Q\) to the set of transitions. \(\forall_{q
 \in Q} trans_{null_q} := <q, q, \tau, \varnothing, \varnothing, \varnothing,
 \varnothing\) \(\mathcal{T} = T \cup \{\big\cup_{q \in Q} trans_{null_q}\}\)
-\(trans_{null} := \big|_{q \in Q} trans_{null_q}\)
+\(trans_{null} := \big\BitOr_{q \in Q} trans_{null_q}\)
 
-We define \(P: \mathcal{T} \rightarrow \mathbb{N}\) be a bijective
+We define \(O: \mathcal{T} \rightarrow \mathbb{N}\) be a bijective
 function mapping each transition to a natural number less than
 \(|\mathcal{T}|\). We define BitVectors \(\{\overleftarrow{tb_1},
 \overleftarrow{tb_2}, \ldots, \overleftarrow{tb_{\lceil
 \log_2 |\mathcal{T}|\rceil}}\}\) of size \(k+2\). The BitVector for each
 individual transition is defined as \(\overleftarrow{trans_t}_{[k+2]} :=
-\big\&_{i=1}^{\lceil\log_2 |\mathcal{T}|\rceil} N_t(tb_i)\), where \(N_t(tb_i)\)
-returns \(tb_i\) if the \(i\)th bit in the base two representation of \(P(t)\)
+\big\BitAnd_{i=1}^{\lceil\log_2 |\mathcal{T}|\rceil} N_t(tb_i)\), where \(N_t(tb_i)\)
+returns \(tb_i\) if the \(i\)th bit in the base two representation of \(O(t)\)
 is 1, and returns \(\neg tb_i\) otherwise.
+
+For clarity, let us consider an example TA with
+\(\lceil\log_2 |\mathcal{T}|\rceil = 5\) and a transition \(t \in \athcal{T}\)
+with \(O(t) = 5\). The base two representation of 5 is \(00101\), and therefore
+\(\overleftarrow{trans_t}_{[k+2]}\) is equivalent to \((\neg tb_5 \BitAnd
+\neg tb_4 \BitAnd tb_3 \BitAnd \neg tb_2 \BitAnd tb_1)\).
+
+** States
+
+For each TA \(\mathcal{A}_l \in \mathcal{A}\), we define a BitVector to
+represent each state of the timed automaton. To do this we define each state as
+the disjunction of all the transitions whose source is that state.
+
+$$state_s := \big\BitOr\{trans_t : source(t) = s\}\ \ \forall_{s \in S}$$
+
+For each TA \(\mathcal{A}_l \in \mathcal{A}\), let \(O: Q \rightarrow
+\mathbb{N}\) be a bijective function mapping each state to a natural number less
+than \(|Q|\). We define BitVectors \(\{\overleftarrow{sb_1},
+\overleftarrow{sb_2}, \ldots, \overleftarrow{sb_{\lceil\log_2 |Q|\rceil}}\}\),
+each of length \(k+2\). The BitVector for the individual state is then defined
+as \(\overleftarrow{state_q}_{[k+2]} := \big\BitAnd_{i=1}^{\lceil\log_2 |Q|\rceil}
+N_q(sb_i)\), where \(N_q(sb_i)\) returns \(sb_i\) if the \(i\)th bit in the base
+two representation of \(O(q)\) is 1, and returns \(\neg sb_i\) otherwise.
 
 ** Variables
 
@@ -193,107 +206,110 @@ an integer argument and returns a real number, where the argument represents the
 time position and the return value is the value of the clock at that instance.
 
 * Constraints
-TODO: mention that the operators \(\lor, \land, | , \&, \Rightarrow\) represent
+TODO: mention that the operators \(\lor, \land, \BitOr , \BitAnd, \Rightarrow\) represent
 bvor, bvand, etc. (in background) -  maybe explain how you are exploiting bvlogic to write constraints - quick comment
-** Initializations
+
+\begin{center}
+\begin{tabular}{c | c | c}
+\multicolumn{3}{c}{Initialization and Progression Constraints} \\
+\midrule
+\(\phi_1 := \underset{i \in [1,|\mathcal{A}|]}{\big\land} \overleftarrow{1}_{[1]} = \overleftarrow{state_{init(i)}}^{[0]}\)
+& \(\phi_2 := \underset{v \in Int}{\big\land} \overleftarrow{init(v)} = \overleftarrow{v[0]}\)
+& \(\phi_3 := \underset{c \in C}{\big\land} init(c) = c(0)\) \\
+\midrule
+\(\phi_4 := \underset{i \in [0,k+1]}{\big\land} \delta(i) > 0\) &
+\multicolumn{2}{c}{
+\(\phi_5 := \overleftarrow{0}_{[k+2]} = \underset{i \in [1,|\mathcal{A}|]}{\big\BitAnd}  \overleftarrow{trans_{i,null}}} \\
+\midrule
+\multicolumn{3}{c}{
+\(\phi_6 := \underset{i \in [1,|\mathcal{A}|]}{\big\land}\ \underset{t \in \mathcal{T}_i}{\big\land} \overleftarrow{trans_t}^{[k:0]} \Rightarrow
+\overleftarrow{state_{source(j)}}^{[k:0]}\ \BitAnd\
+\overleftarrow{state_{dest(j)}}^{[k+1:1]}\)} \\
+\midrule
+\multicolumn{3}{c}{
+\(\phi_7 := \underset{c \in C}{\big\land}\ \underset{j \in [0,k]}{\big\land}\ \underset{t \in \mathcal{R}(c)}{\BitAnd} (\neg\overleftarrow{t})^{[j]}
+\Rightarrow c(j+1) = c(j) + \delta(j)\)} \\
+\midrule
+\multicolumn{3}{c}{
+\(\phi_8 := \underset{v \in Int}{\big\land}  \underset{t \in assign(v)}{\BitAnd} (\neg \overleftarrow{trans_{t}}^{[k:0]}) \Rightarrow \underset{j \in [1,\lambda(v)]}{\big\BitAnd}
+(tb_j^{[k:0]} = tb_j^{[k+1:1]}) \)} \\
+\end{tabular}
+\end{center}
+** Initialization & Progression
 
 The initialization constraints are similar for states, clocks, and bounded
 variables. For states, we assert that the initial state holds in the first time
 instance by comparing the vector for the initial state \(state_{i,init}\) to the
-constant vector \(\overleftarrow{1}_{[k+2]}\) as follows:
+constant vector \(\overleftarrow{1}_{[1]}\) in formula \(\phi_1\). This requires
+the first bit of the state vector to be set to 1, signifying that the state is
+active in time instance 0. For variables, we assert that the provided intial
+starting value, \(init(v)\) is equal to the value of the variable at time
+instance 0. For clocks, we assert that the clock function at time instance 0 is
+equal to its provided initial value in formula \(\phi_3\).
 
-\(\overleftarrow{1}_{[1]} = \overleftarrow{state_{i,init}}^{[0]}\)
+Each time instance in the range \([0,k+1]\) represents an instant of time in
+which at least one timed automaton makes a discrete (non-null) transition. In
+between these instances, all timed automata remain stationary, and only the
+clocks progress. To capture this progression, we introduce a new clock,
+\(\delta\). Formula \(\phi_4\) captures that \(\delta\) is defined as a function
+over integers in the range \([0,k+1]\) that returns positive integers. The value
+of \(delta(i)\) at instance \(i\) refers to the amount of time between instance
+\(i\) and instance \(i+1\). To ensure that each time instance contains a
+discrete transition, we assert with formula \(\phi_5\) that at every instance,
+at least one timed automaton \(i\) has \(\overleftarrow{trans_{i,null}}\) set to
+0, meaning that it is not taking a null transition. This guarantees that at
+least one timed automaton has an active non-null transition at each time
+instance. Another aspect of progression is ensuring that the active state of a
+timed automaton correctly reflects the transitions being taken. To that effect,
+formula \(\phi_6\) asserts that when a transition is taken at time instance
+\(i\), the source state of the transition is active at instance \(i\), and the
+destination state is active at instance \(i+1\).
 
-For clocks, we assert the at time instance 0, the clock is equal to the initial
-value.
-
-\(init(c) = c(0)\), \(\forall c \in \mathcal{C}\)
-
-For variables, we equate \(var_{i,0}\) to the initial value of the variable.
-
-\(\overleftarrow{init(v_i)} = \overleftarrow{var_{i,0}}\), \(\forall v_i \in Int\)
-
-** Progression
-
-*** Timed Automata
-
-A simple constraint to ensure progression is the constraint that at each time
-instance, at least one Timed Automaton must undergo a discrete transition. We
-assert that at least one of the null transitions must not hold at each time
-instance.
-
-\(\neg\overleftarrow{trans_{1,null}}_{[k+2]} \lor
-\neg\overleftarrow{trans_{2,null}}_{[k+2]} \lor \ldots \lor
-\neg\overleftarrow{trans_{|\mathcal{A}|,null}}_{[k+2]}\sim\)
-
-In addition, we must ensure that if a transition is fired, the state of the TA
-has the appropriate values. We assert that if a
-transition from state \(a\) to state \(b\) is active at time instance \(i\),
-then state \(a\) is active at time instance \(i\) and state \(b\) is active at
-time instance \(i+1\).
-
-\(\overleftarrow{trans_{i,j}}^{[k:0]} \Rightarrow
-\overleftarrow{state_{i,source_i(j)}}^{[k:0]}\ \&\
-\overleftarrow{state_{i,dest_i(j)}}^{[k+1:1]}\)
-
-*** Clocks
-
-Each clock \(c \in \mathcal{C}\) is represented by a function that takes an integer argument
-and returns a real number, where the argument represents the time position and
-the return value is the value of the clock at that instance. To formalize this,
-we introduce a new clock delta, which is initialized to 0 and is constrained to
-only have positive values.
-
-\(0 < \delta(i)\), \(\forall i \in [0,b]\)
-
-We then add a constraint for each clock that informally says iff no transition
-assigns or resets a clock \(c_i\) at time instance j, then the clock value
-increments by the value of \((delta\ j)\). To formalize this we first compute
-for each clock a list of all transitions that reset the clock's value,
-\(\mathcal{R}_c = \{\mathcal{R}_{c,1}, \mathcal{R}_{c,2}, \ldots\}\), where each
-\(\mathcal{R}_{c,l}\) represents the BitVector
-\(\overleftarrow{trans_{i,j}}_{[k+2]}\) for that transition. We can then express
-the desired constraint:
-
-\( (\neg \mathcal{R}_{c,1}\ \&\ \neg \mathcal{R}_{c,2} \ldots )^{[j]}
-\Rightarrow c(j+1) = c(j) + \delta(j)\), \(\forall 0 \leq j \leq k+1\)
-
+We must next discuss the progession of the clocks and integer variables. In
+formula \(\phi_4\) we discussed the special clock \(\delta\), and how it
+represents the passing of time between the discete time instances. Formula
+\(\phi_7\) connects \(\delta\) to the other clocks. At each time instance \(i\),
+a clock is either reset by a transition, or its value increments by
+\(\delta(i)\). To do this we define the set \(\mathcal{R}_c\) for every clock
+\(c\), which is defined as the set of all transitions \(t\) that reset the value
+of clock \(c\). When no transition in \(\mathcal{R}_c\) is active, the clock
+must progress according to the value of \(\delta\). Similarly for variables, we
+define the set \(assign(v)\) for every variable \(v\) containing all transitions
+that assign a value to the variable. When none of these transitions are active,
+formula \(\phi_8\) ensures that the value of \(v\) remains unchanged.
 
 ** Transitions
-*** Guards
+
+\begin{center}
+\begin{tabular}{c}
+Transition Constraints \\
+\midrule
+\(\phi_9 := \underset{t \in T}{\big\land}\ \underset{\gamma \in TODO_t}{\big\land}\ \underset{l \in [0,k]}{\big\land} \overleftarrow{trans_t}^{[l]} \Rightarrow  (c_\gamma(l) + \delta(l))\ \sim_\gamma\
+val_\gamma\) \\
+\midrule
+\(\phi_{10} := \underset{t \in T}{\big\land}\ \underset{\gamma \in TODO_t}{\big\land}\ \underset{l \in [0,k]}{\big\land} \overleftarrow{trans_t}^{[l]} \Rightarrow  \overleftarrow{var_\gamma(l)}\ \sim_\gamma\ \overleftarrow{val_\gamma}\) \\
+\midrule
+\(\phi_{11} := \underset{t \in T}{\big\land}\ \underset{\alpha \in TODO_t}{\big\land}\ \underset{l \in [0,k]}{\big\land} \overleftarrow{trans_t}^{[l]} \Rightarrow c_\alpha(l+1) = val_\alpha\) \\
+\midrule
+\(\phi_{12} := \underset{t \in T}{\big\land}\ \underset{\alpha \in TODO_t}{\big\land}\ \underset{l \in [0,k]}{\big\land} \overleftarrow{trans_t}^{[l]} \Rightarrow \overleftarrow{var_\alpha(l+1)} = expr_\alpha\) \\
+\midrule
+\(\phi_{13} := \underset{t \in T}{\big\land} \overleftarrow{trans_t} \Rightarrow (v \vDash Inv(source(t)) \land v' \vDash_w Inv(dest(t))) \lor (v \vDash_w Int(source(t)) \land v' \vDash Inv(dest(t)))\) \\
+\bottomrule
+\end{tabular}
+\end{center}
 
 Each transition can have multiple guards. The guards consist of two types, clock
 guards and variable guards. We will consider clock guards first. Clock guards
 have the form \(c\ \sim\ val\), where \(c \in \mathcal{C}\), \(val \in
-\mathbb{Z}\) and \(\sim \in \{<,>,\leq,\geq\}\). These guards neatly translate
-into:
+\mathbb{Z}\) and \(\sim \in \{<,>,\leq,\geq\}\). Formula \(\phi_9\) asserts that
+for every clock guard, its transition being active at time instance \(l\)
+implies that at the instance of transition, the relationship \(\sim\) holds
+between the clock value (which is incremented by \(\delta(l)\) to account for
+the amount of time spent in the state \(source(t)\)) and the value \(val\).
+\(\phi_{10}\) captures the same semantics for variable guards, asserting that an
+active transition with a guard implies that the guard is true at that time
+instance.
 
-\(\overleftarrow{trans_{i,j}}_{[k+2]}^{[l]} \Rightarrow  (c(l) + \delta(l))\ \sim\
-val\), \(\forall l \in \mathbb{Z}, 0 \leq l \leq k\)
-
-Variable guards are similar to the clock guards, with the exception that the
-value that the variable is being compared to does not have to be an integer, but
-can be an expression of variables and integers, related with the operators in
-the set \(\sim\) mentioned above. This requires only minor changes to the format
-of the constraint. We will use the term \(expr\) to refer to the expression of
-variables and integers, where variables are represented using the \(var(l)\)
-syntax and the integers and operators are represented as-is. TODO: mention
-conversion from BV to int of variables in expr.
-
-\(\overleftarrow{trans_{i,j}}_{[k+2]}^{[l]} \Rightarrow  \overleftarrow{var_{v,l}}\ \sim\
-expr\), \(\forall l \in \mathbb{Z}, 0 \leq l \leq k\)
-
-
-*** Assignments
-
-There are both clock and variable assignments.
-
-*Clock*:
-\(\ \overleftarrow{trans_{i,j}}^{[l]} \Rightarrow c(l+1) = val\)
-
-
-*Variable*: \(\ \overleftarrow{trans_{i,j}}^{[l]} \Rightarrow \overleftarrow{var_{v,l+1}} = expr\)
-*** Invariants
 
 \(\overleftarrow{trans_{i,j}}^{[l]} \Rightarrow (v \vDash Inv(source_i(j)) \land v'
 \vDash_w Inv(dest_i(j))) \lor (v \vDash_w Inv(source_i(j)) \land v' \vDash Inv(dest_i(j)))\)
@@ -301,44 +317,18 @@ There are both clock and variable assignments.
 *** Sync
 ** Loop Constraints
 
-* Clipboard
-The first problem is how to represent the currently active state of a given
-Timed Automaton at a given position in time. Each TA has a finite set of
-possible states, \(S_i = \{S_{i,0}, S_{i,1}, \ldots S_{i,n_i}\}\). In a purely
-propositional logic the most straightforward approach would be to assign a
-proposition to each state, however it is possible to instead use the built-in
-BitVector arithmetic of SMT-LIB2 to instead represent the current state as
-BitVector. Rather than \(n_i\) propositions, a BitVector of length
-\(\lceil \log_2 n_i \rceil\) bits can represent the current state.
-\(sb_{i,j}, 0 \leq j < \lceil \log_2 n_i \rceil\) refers to the individual
-bits that make up the state BitVector for TA \(\mathcal{A}_i\).
+As mentioned previously, we are only interested in lasso-shaped runs that end in
+a loop. To keep track of the initial position of the loop, we declare the
+variable \(loop_init\), and constrain it to have a value in the range \([1,k]\).
 
-In addition to multiple state bits being related by a single BitVector, we also
-wish to capture the relationships between the position of the TA at different
-time positions. Many TA constraints are expressed over all time instances, for
-example the guard of a transition expresses the constraint that the transition
-can only fire if a certain condition holds. This constraint will need to be
-expressed over every time instance. In order to easily express constraints that
-must hold over every time instance, we will create a BitVector for every bit of
-our state representation. However instead of having one vector per time
-instance, where each bit in the vector represents a different bit of the current
-state, we will have one vector per state bit, where each bit of the BitVector
-represents a different time instance.
+Intuitively, the time position \(k+1\) represents the first time position in the
+next iteration of the loop. It is effectively a 'copy' of the position
+\(loop_init\), however we add it as a distinct position so that we may capture
+the semantics of the transition between time position \(k\) and time position
+\(loop_init\). We therefore introduce constraints [], which require that the
+active state and transition of each timed automata at instance \(k+1\) be equal
+to that at instance \(loop_init\). The set of constraints [] enforces the same
+requirement for each bounded integer variable.
 
-Notation: There is a network (set) of timed automata, \(\mathcal{A}\). Each
-\(\mathcal{A}_i \in \mathcal{A}\) has a set of states \(\mathcal{S}_i\) and a
-set of transitions \(\mathcal{T}_i\). The functions \(source_i\) and \(dest_i\)
-accept a transition \(j \in \mathcal{T}_i\) and return the source and
-destination state respectively. In addition to the timed automata, the network
-has a set of clocks \(X\) and the accompaning clock evaluation function \(v: X
-\rightarrow \mathbb{R}_{\geq 0}\). Similarly there is the set of bounded integer
-variables \(Int\) and the variable evaluation function \(v_{var}: Int
-\rightarrow \mathbb{Z}\).
-
-Transitions and bounded variables are represented in a similar way. Let \(m_i\)
-be the number of transitions for \(\mathcal{A}_i\), then we define a BitVector
-for each transition bit, \(\overleftarrow{tb_{i,j}}_{[k+2]}\), \(0 \leq j <
-\lceil \log_2 m_i \rceil \). We also define BitVectors, defined over the
-\(\overleftarrow{tb_{i,j}}\) BitVectors, for describing each individual
-transition, \(trans_{i,j}\), \(1 \leq j \leq m_i\) which has a length of
-\(k+2\).
+Naively we would enforce the same constraint on every clock, however [reference
+Kinderman paper]. Therefore for each clock
