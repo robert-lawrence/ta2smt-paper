@@ -293,7 +293,7 @@ val_\gamma\) \\
 \midrule
 \(\phi_{12} := \underset{t \in T}{\big\land}\ \underset{\alpha \in TODO_t}{\big\land}\ \underset{l \in [0,k]}{\big\land} \overleftarrow{trans_t}^{[l]} \Rightarrow \overleftarrow{var_\alpha(l+1)} = expr_\alpha\) \\
 \midrule
-\(\phi_{13} := \underset{t \in T}{\big\land} \overleftarrow{trans_t} \Rightarrow (v \vDash Inv(source(t)) \land v' \vDash_w Inv(dest(t))) \lor (v \vDash_w Int(source(t)) \land v' \vDash Inv(dest(t)))\) \\
+\(\phi_{13} := \underset{t \in T}{\big\land} \overleftarrow{trans_t} \Rightarrow (v \vDash Inv(source(t)) \land v' \vDash_w Inv(dest(t))) \)\( \lor (v \vDash_w Int(source(t)) \land v' \vDash Inv(dest(t)))\) \\
 \bottomrule
 \end{tabular}
 \end{center}
@@ -310,12 +310,33 @@ the amount of time spent in the state \(source(t)\)) and the value \(val\).
 active transition with a guard implies that the guard is true at that time
 instance.
 
-
-\(\overleftarrow{trans_{i,j}}^{[l]} \Rightarrow (v \vDash Inv(source_i(j)) \land v'
-\vDash_w Inv(dest_i(j))) \lor (v \vDash_w Inv(source_i(j)) \land v' \vDash Inv(dest_i(j)))\)
-
-*** Sync
+** Sync
+\begin{center}
+\begin{tabular}{c}
+Sync Constraints \\
+\(\phi_{14} := \underset{\alpha \in Act}{\land} \underset{t \in SEND(\alpha)}{\land} \overleftarrow{trans_t} \Rightarrow (\neg \underset{t' \in SEND(\alpha)}{\lor} \overleftarrow{trans_{t'}}) \land (\underset{t' \in REC(\alpha)}{\lor} \overleftarrow{trans_{t'}})\) \\
+\midrule
+\(\phi_{15} := \underset{\alpha \in Act}{\land} \underset{t \in REC(\alpha)}{\land} \overleftarrow{trans_t} \Rightarrow (\neg \underset{t' \in REC(\alpha)}{\lor} \overleftarrow{trans_{t'}}) \land (\underset{t' \in SEND(\alpha)}{\lor} \overleftarrow{trans_{t'}})\) \\
+\end{tabular}
+\end{center}
 ** Loop Constraints
+
+\begin{center}
+\begin{tabular}{c}
+Loop Constraints \\
+\(\phi := \underset{i \in [1,|\mathcal{A}|}{\big\land}\ \underset{j \in [1,\lceil\log_2 |\mathcal{T}_i|\rceil]}{\big\land} \overleftarrow{tb_j}^{[k+1]} = \overleftarrow{tb_j}^{[loop]}\) \\
+\midrule
+\(\phi := \underset{v \in Int}{\big\land}\ \underset{j \in [1,\lambda(v)]}{\big\land} \overleftarrow{vb_j}^{[k+1]} = \overleftarrow{vb_j}^{[loop]}\) \\
+\midrule
+\(\phi := \underset{c \in X}{\big\land} (\lfloor c(k+1) \rfloor\ = \lfloor c(loop) \rfloor) \lor (\lfloor c(k+1) \rfloor\ > max(c) \land \lfloor c(loop) \rfloor > max(c)) \) \\
+\midrule
+\(\phi := \underset{c \in X}{\big\land} \lfloor c(loop) \rfloor < max(c) \Rightarrow (frac(c(k+1)) = 0) \Leftrightarrow (frac(c(loop)) = 0) \\
+\midrule
+\(\phi := \underset{c,c' \in X}{\big\land} frac(c(k+1)) < frac(c'(k+1)) \Leftrightarrow frac(c(loop)) < frac(c'(loop)) \\
+\midrule
+\(\phi := \underset{c \in X}{\land} c(k) > c(max) \lor (TODO resetInLoop)\) \\
+\end{tabular}
+\end{center}
 
 As mentioned previously, we are only interested in lasso-shaped runs that end in
 a loop. To keep track of the initial position of the loop, we declare the

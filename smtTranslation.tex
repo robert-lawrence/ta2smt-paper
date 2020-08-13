@@ -1,4 +1,4 @@
-% Created 2020-08-12 mer 06:44
+% Created 2020-08-13 gio 07:40
 % Intended LaTeX compiler: pdflatex
 \documentclass[a4paper,11pt]{article}
 \usepackage[utf8]{inputenc}
@@ -38,7 +38,7 @@
 \tableofcontents
 
 \section{Introduction}
-\label{sec:orgbac19c5}
+\label{sec:org7ea7ec5}
 Timed Automata are a commonly used representation for modelling the behavior of
 systems with real-time semantics.
 
@@ -71,9 +71,9 @@ network of timed automata into the SMT-LIB format, skipping the intermediate
 CLTLoc representation. While CLTLoc is an elegant expressive language, there is
 a significant overhead in
 \section{Preliminaries}
-\label{sec:org14d3747}
+\label{sec:orgef419d8}
 \subsection{Bit-Vector Logic}
-\label{sec:orgbd552f8}
+\label{sec:orgdd8588c}
 A BitVector is an array of binary values, or bits. BitVectors are interpreted
 using two's complement arithmetic to produce integer values, and their length
 can be any positive integer (\(\mathbb{Z}^+\)). We use the notation
@@ -100,7 +100,7 @@ bitwise operators not \(\neg\), disjuction \(\lor\), conjunction \(\land\),
 equivalence \(\iff\).
 
 \subsection{Timed Automata}
-\label{sec:org5ce4535}
+\label{sec:org432c3ad}
 Let \(AP\) be a set of atomic propositions, and let \(Act\) be a set of events.
 In addition we define a null event \(\tau\). \(Act_{\tau}\) is the set \(Act
 \cup \{\tau\}\). Let \(X\) be a finite set of clocks, and \(Int\) a finite set
@@ -126,10 +126,10 @@ consisting of a source and destination state, an action, a set of clock and
 variable guards, and a set of clocks to be reset when the transition fires.
 
 \subsection{Bounded Satisfiability Checking}
-\label{sec:org76cff86}
+\label{sec:org7c68252}
 (here sketch both ta->CLTLoc encoding and sbvzot translation)
 \section{TA Encoding}
-\label{sec:org53dc3ff}
+\label{sec:org592ca22}
 Using BitVector logic, we have the ability to group logically connected
 propositions into a Vector, granting significant speedups on operations
 performed on every element of the vector.
@@ -172,7 +172,7 @@ time instances as follows:
 
 
 \subsection{Transitions}
-\label{sec:org5c35d0d}
+\label{sec:org673fa45}
 
 In the traditional description of Timed Automata, a TA that does not perform a
 discrete transition at a given time instance is said to perform a \(null
@@ -200,7 +200,7 @@ with \(O(t) = 5\). The base two representation of 5 is \(00101\), and therefore
 \neg tb_4 \BitAnd tb_3 \BitAnd \neg tb_2 \BitAnd tb_1)\).
 
 \subsection{States}
-\label{sec:org7533da9}
+\label{sec:orga7ca9c6}
 
 For each TA \(\mathcal{A}_l \in \mathcal{A}\), we define a BitVector to
 represent each state of the timed automaton. To do this we define each state as
@@ -218,7 +218,7 @@ N_q(sb_i)\), where \(N_q(sb_i)\) returns \(sb_i\) if the \(i\)th bit in the base
 two representation of \(O(q)\) is 1, and returns \(\neg sb_i\) otherwise.
 
 \subsection{Variables}
-\label{sec:org1ac0174}
+\label{sec:org1eadba5}
 
 Bounded integer variables are treated slightly differently, because unlike
 states and transitions, the possible values of a bounded integer variable are
@@ -240,14 +240,14 @@ k+1\) is a vector of \(\lambda(v_i)\) bits that represents the value of variable
 
 
 \subsection{Clocks}
-\label{sec:org34ead20}
+\label{sec:orga9ead02}
 
 Each clock \(c \in \mathcal{C}\) is represented by a function \(c\) that takes
 an integer argument and returns a real number, where the argument represents the
 time position and the return value is the value of the clock at that instance.
 
 \section{Constraints}
-\label{sec:org8c1472f}
+\label{sec:orge8a2779}
 TODO: mention that the operators \(\lor, \land, \BitOr , \BitAnd, \Rightarrow\) represent
 bvor, bvand, etc. (in background) -  maybe explain how you are exploiting bvlogic to write constraints - quick comment
 
@@ -278,7 +278,7 @@ bvor, bvand, etc. (in background) -  maybe explain how you are exploiting bvlogi
 \end{tabular}
 \end{center}
 \subsection{Initialization \& Progression}
-\label{sec:org215f92a}
+\label{sec:orgf067bb9}
 
 The initialization constraints are similar for states, clocks, and bounded
 variables. For states, we assert that the initial state holds in the first time
@@ -322,7 +322,7 @@ that assign a value to the variable. When none of these transitions are active,
 formula \(\phi_8\) ensures that the value of \(v\) remains unchanged.
 
 \subsection{Transitions}
-\label{sec:org680bac3}
+\label{sec:org05359ad}
 
 \begin{center}
 \begin{tabular}{c}
@@ -337,7 +337,7 @@ val_\gamma\) \\
 \midrule
 \(\phi_{12} := \underset{t \in T}{\big\land}\ \underset{\alpha \in TODO_t}{\big\land}\ \underset{l \in [0,k]}{\big\land} \overleftarrow{trans_t}^{[l]} \Rightarrow \overleftarrow{var_\alpha(l+1)} = expr_\alpha\) \\
 \midrule
-\(\phi_{13} := \underset{t \in T}{\big\land} \overleftarrow{trans_t} \Rightarrow (v \vDash Inv(source(t)) \land v' \vDash_w Inv(dest(t))) \lor (v \vDash_w Int(source(t)) \land v' \vDash Inv(dest(t)))\) \\
+\(\phi_{13} := \underset{t \in T}{\big\land} \overleftarrow{trans_t} \Rightarrow (v \vDash Inv(source(t)) \land v' \vDash_w Inv(dest(t))) \)\( \lor (v \vDash_w Int(source(t)) \land v' \vDash Inv(dest(t)))\) \\
 \bottomrule
 \end{tabular}
 \end{center}
@@ -354,14 +354,35 @@ the amount of time spent in the state \(source(t)\)) and the value \(val\).
 active transition with a guard implies that the guard is true at that time
 instance.
 
-
-\(\overleftarrow{trans_{i,j}}^{[l]} \Rightarrow (v \vDash Inv(source_i(j)) \land v'
-\vDash_w Inv(dest_i(j))) \lor (v \vDash_w Inv(source_i(j)) \land v' \vDash Inv(dest_i(j)))\)
-
-\subsubsection{Sync}
-\label{sec:org6c5e3f4}
+\subsection{Sync}
+\label{sec:orgec7d42c}
+\begin{center}
+\begin{tabular}{c}
+Sync Constraints \\
+\(\phi_{14} := \underset{\alpha \in Act}{\land} \underset{t \in SEND(\alpha)}{\land} \overleftarrow{trans_t} \Rightarrow (\neg \underset{t' \in SEND(\alpha)}{\lor} \overleftarrow{trans_{t'}}) \land (\underset{t' \in REC(\alpha)}{\lor} \overleftarrow{trans_{t'}})\) \\
+\midrule
+\(\phi_{15} := \underset{\alpha \in Act}{\land} \underset{t \in REC(\alpha)}{\land} \overleftarrow{trans_t} \Rightarrow (\neg \underset{t' \in REC(\alpha)}{\lor} \overleftarrow{trans_{t'}}) \land (\underset{t' \in SEND(\alpha)}{\lor} \overleftarrow{trans_{t'}})\) \\
+\end{tabular}
+\end{center}
 \subsection{Loop Constraints}
-\label{sec:org7c564a5}
+\label{sec:org9068e85}
+
+\begin{center}
+\begin{tabular}{c}
+Loop Constraints \\
+\(\phi := \underset{i \in [1,|\mathcal{A}|}{\big\land}\ \underset{j \in [1,\lceil\log_2 |\mathcal{T}_i|\rceil]}{\big\land} \overleftarrow{tb_j}^{[k+1]} = \overleftarrow{tb_j}^{[loop]}\) \\
+\midrule
+\(\phi := \underset{v \in Int}{\big\land}\ \underset{j \in [1,\lambda(v)]}{\big\land} \overleftarrow{vb_j}^{[k+1]} = \overleftarrow{vb_j}^{[loop]}\) \\
+\midrule
+\(\phi := \underset{c \in X}{\big\land} (\lfloor c(k+1) \rfloor\ = \lfloor c(loop) \rfloor) \lor (\lfloor c(k+1) \rfloor\ > max(c) \land \lfloor c(loop) \rfloor > max(c)) \) \\
+\midrule
+\(\phi := \underset{c \in X}{\big\land} \lfloor c(loop) \rfloor < max(c) \Rightarrow (frac(c(k+1)) = 0) \Leftrightarrow (frac(c(loop)) = 0) \\
+\midrule
+\(\phi := \underset{c,c' \in X}{\big\land} frac(c(k+1)) < frac(c'(k+1)) \Leftrightarrow frac(c(loop)) < frac(c'(loop)) \\
+\midrule
+\(\phi := \underset{c \in X}{\land} c(k) > c(max) \lor (TODO resetInLoop)\) \\
+\end{tabular}
+\end{center}
 
 As mentioned previously, we are only interested in lasso-shaped runs that end in
 a loop. To keep track of the initial position of the loop, we declare the
