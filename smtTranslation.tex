@@ -1,4 +1,4 @@
-% Created 2020-08-18 mar 07:16
+% Created 2020-08-19 mer 07:24
 % Intended LaTeX compiler: pdflatex
 \documentclass[a4paper,12pt]{article}
 \usepackage[utf8]{inputenc}
@@ -22,6 +22,7 @@
 \newcommand*\BitOr{\mathbin{|}}
 \newcommand*\ShiftLeft{\ll}
 \newcommand*\ShiftRight{\gg}
+\setlength{\parskip}{1em}
 \author{Robert Smith}
 \date{\today}
 \title{Smt Translation}
@@ -38,7 +39,7 @@
 \tableofcontents
 
 \section{Introduction}
-\label{sec:org57d344b}
+\label{sec:org171fe39}
 \iffalse
 Timed Automata are a commonly used representation for modelling the behavior of
 systems with real-time semantics.
@@ -73,9 +74,9 @@ CLTLoc representation. While CLTLoc is an elegant expressive language, there is
 a significant overhead in
 \fi
 \section{Preliminaries}
-\label{sec:org360135e}
+\label{sec:org7e034e3}
 \subsection{Bit-Vector Logic}
-\label{sec:orga0cc13f}
+\label{sec:orgc00ab3e}
 A BitVector is an array of binary values, or bits. BitVectors are interpreted
 using two's complement arithmetic to produce integer values, and their length
 can be any positive integer (\(\mathbb{Z}^+\)). We use the notation
@@ -105,7 +106,7 @@ operator to the \(i\)th bit of each of the input vectors, following the usual
 convention where \(1\) is true and \(0\) is false.
 
 \subsection{Timed Automata}
-\label{sec:orge565446}
+\label{sec:org6a40d1c}
 Let \(AP\) be a set of atomic propositions, and let \(Act\) be a set of
 synchronization events. In addition we define a null event \(\tau\).
 \(Act_{\tau}\) is the set \(Act \cup \{\tau\}\). Let \(X\) be a finite set of
@@ -146,10 +147,10 @@ numerical subscript to the set in question, for example \(X_i\) to refer to the
 clocks used by a specific timed automaton.
 
 \subsection{Bounded Satisfiability Checking}
-\label{sec:org01193b8}
+\label{sec:orgdbb904e}
 (here sketch both ta->CLTLoc encoding and sbvzot translation)
 \section{TA Encoding}
-\label{sec:orgdc164e6}
+\label{sec:org13a3fd3}
 Using BitVector logic, we have the ability to group logically connected
 propositions into a Vector, granting significant speedups on operations
 performed on every element of the vector.
@@ -194,7 +195,7 @@ time instances as follows:
 
 
 \subsection{Transitions}
-\label{sec:org5cd3c8d}
+\label{sec:org81f49f7}
 
 In the traditional description of Timed Automata, a TA that does not perform a
 discrete transition at a given time instance is said to perform a \(null\
@@ -222,7 +223,7 @@ with \(O(t) = 5\). The base two representation of 5 is \(00101\), and therefore
 \neg tb_4 \BitAnd tb_3 \BitAnd \neg tb_2 \BitAnd tb_1)\).
 
 \subsection{States}
-\label{sec:org762906a}
+\label{sec:orga1328c7}
 
 For each TA \(\mathcal{A}_l \in \mathcal{A}\), we define a BitVector to
 represent each state of the timed automaton. To do this we define each state as
@@ -240,7 +241,7 @@ N_q(sb_i)\), where \(N_q(sb_i)\) returns \(sb_i\) if the \(i\)th bit in the base
 two representation of \(O(q)\) is 1, and returns \(\neg sb_i\) otherwise.
 
 \subsection{Variables}
-\label{sec:org10bb350}
+\label{sec:org33b75e3}
 
 Bounded integer variables are treated slightly differently, because unlike
 states and transitions, the possible values of a bounded integer variable are
@@ -262,14 +263,14 @@ k+1\) is a vector of \(\lambda(v_i)\) bits that represents the value of variable
 
 
 \subsection{Clocks}
-\label{sec:orga3f87c9}
+\label{sec:org128095e}
 
 Each clock \(c \in \mathcal{C}\) is represented by a function \(c\) that takes
 an integer argument and returns a real number, where the argument represents the
 time position and the return value is the value of the clock at that instance.
 
 \section{Constraints}
-\label{sec:org34205fb}
+\label{sec:orga4ab00a}
 \iffalse
 TODO: mention that the operators \(\lor, \land, \BitOr , \BitAnd, \Rightarrow\) represent
 bvor, bvand, etc. (in background) -  maybe explain how you are exploiting
@@ -277,7 +278,7 @@ bvlogic to write constraints - quick comment
 \fi
 
 \subsection{Initialization \& Progression}
-\label{sec:org6485f99}
+\label{sec:orgbf490f4}
 
 \begin{center}
 \begin{tabular}{c | c | c}
@@ -348,7 +349,7 @@ that assign a value to the variable. When none of these transitions are active,
 formula \(\phi_8\) ensures that the value of \(v\) remains unchanged.
 
 \subsection{Transitions}
-\label{sec:orgd4b997d}
+\label{sec:org23532a2}
 
 \begin{center}
 \begin{tabular}{c}
@@ -435,7 +436,7 @@ inequality can be satisfied with equality at the instance of transition, since
 the automaton is not actually in that state at that instant.
 
 \subsection{Sync}
-\label{sec:orgff0592e}
+\label{sec:orgf40352d}
 \begin{center}
 \begin{tabular}{c}
 Sync Constraints \\
@@ -492,7 +493,7 @@ Formulas \(\phi_{16}\) and \(\phi_{18}\) describe these constraints for
 broadcast send and receive, respectively, while formula \(\phi_{17}\) describes
 the 'compulsive' nature of the 'broadcast send' transition.
 \subsection{Loop Constraints}
-\label{sec:org5804433}
+\label{sec:org3a5b9f2}
 
 \begin{center}
 \begin{tabular}{c}
@@ -563,10 +564,84 @@ vector, we can determine if a given clock is reset within the loop portion of
 the trace.
 
 
-\section{Verification}
-\label{sec:orgda2630c}
 \section{Evaluation}
-\label{sec:org4dabf4a}
+\label{sec:org3630bc5}
+In this chapter we present the results of several experimental evaluations of
+the SMT conversion process. These tests cover several different benchmarks
+common for bounded model checking programs. For comparison, results are
+presented alongside those of the previous iteration of the TACK program, to
+better judge the improvements made using the new process.
+
+In all of the following tests, the time provided measures the combined time
+taken by i) the TACK program to parse the problem and convert it to SMT form and
+ii) the z3 program to decide the satisfiability of the SMT problem. In practice,
+the time taken by z3 dwarfs the tiem used by the TACK translation, and for the
+problem sizes encounted below the time taken by the TACK translation was always
+negligiable.
+
+All tests were performed on a server equipped with an Intel(R) Core(TM) i7-4770
+CPU (3.40 GHz) with 8 cores, 16 GB of RAM and Debian Linux (version 4.19).
+
+\subsection{Fischer Mutual Exclusion Protocol}
+\label{sec:org0da130f}
+The Fischer benchmark models a protocol for ensuring exclusive access to a
+shared common resource that can be requested by multiple processes. The protocol
+uses global variables, integrated into the guards and assignment statements of
+the timed automata, to control access. Each timed automaton in the network has a
+'critical state', and the protocol guarantees that only one timed automaton can
+be in its critical state at a time.
+
+To be more specific, there is a shared variable \(id\), which can take any
+integer value in the range \([0,n]\), where \(n\) is the number of processes in the
+protocol. Each process begins in an 'idle' state \(a\), and in order to reach the
+critical section \(cs\), a process must first check to see that the critical
+section is unoccupied (\(id=0\)), at which point the process writes its own id to
+the shared variable (while entering state \(b\)) and then performs a second
+transition to state \(c\) within 2 seconds of entering state \(b\). The process is
+then required to wait at least 2 seconds in state \(c\). If after that interval
+the value of the shared variable is still equal to its id, the process may access
+the critical section, otherwise it must wait for the value of \(id\) to return
+to \(0\) before trying again (returning to \(b\)). Once access to the critical
+section is granted, the process may remain for an unlimited amount of time before
+returning to state \(a\).
+
+To measure the scalability of our program, we performed multiple test runs while
+modifying the size of the problem. To modify the size, we change the number of
+processes (timed automata) in the network that are attempting to execute their
+critical region. Aside from a numerical id, these processes are identical in
+their behavior. We have tested the Fischer protocol on networks of between 2 and
+10 processes and collected their results.
+
+In addition to testing the scalability of the program, we have also run the
+Fischer protocol through several different MITL properties for verification.
+These properties will be explained below.
+
+\begin{itemize}
+\item Property 1: \(\mathcal{G}_{[0,\infty)} (p_1.b \Rightarrow \mathcal{F}_{[0,\infty)}p_1.c)\)
+\item Property 2: \(\mathcal{G}_{[0,\infty)} (p_1.b \Rightarrow \mathcal{F}_{[0,3]}p_1.c)\)
+\item Property 3: \(\mathcal{G}_{[0,\infty)} (p_1.b \Rightarrow \mathcal{F}_{(0,3)}p_1.cs)\)
+\item Property 4: \(\mathcal{G}_{[0,\infty)} (p_1.b \Rightarrow \mathcal{F}_{(0,3)}p_1.c)\)
+\item Property 5: \(\mathcal{G}_{[0,\infty)} (p_1.b \Rightarrow \mathcal{F}_{[0,3]}p_1.cs)\)
+\item Property 6: \(\mathcal{G}_{[0,\infty)} (\neg (\underset{i=1:n-1}{\lor} (p_i.cs \land \underset{j=i+1:n}{\lor} p_j.cs )))\)
+\end{itemize}
+
+
+Property 1 requires that once process one enters state \(b\), it always
+transitions to state \(c\). Property 2 is similar, however it contains the
+additional constraint that process 1 must complete the transition to state \(c\)
+in at most 3 seconds. Property 3 has a similar time bound, but requires that
+process one move to the critical section \(cs\) rather than \(c\) within the
+time bound, which we expect to not be universally true (a process can return to
+state \(b\) after moving to state \(c\) if another process has reset the
+variable \(id\)). Properties 4 and 5 are copies of properties 2 and 3
+respectively with the sole difference of inclusion vs exclusion at the
+boundaries of the interval. Property 6 seeks to prove the ``safety'' of the
+protocol, namely that two distinct processes are never in the critical section
+at the same time.
+
+\subsection{CSMA/CD}
+\label{sec:org7f3fd99}
+
 \section{Conclusion}
-\label{sec:org83e7004}
+\label{sec:orgd10da5e}
 \end{document}

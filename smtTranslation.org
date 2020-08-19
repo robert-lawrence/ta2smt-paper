@@ -10,6 +10,7 @@
 #+LATEX_HEADER: \newcommand*\BitOr{\mathbin{|}}
 #+LATEX_HEADER: \newcommand*\ShiftLeft{\ll}
 #+LATEX_HEADER: \newcommand*\ShiftRight{\gg}
+#+LATEX_HEADER: \setlength{\parskip}{1em}
 * Introduction
 \iffalse
 Timed Automata are a commonly used representation for modelling the behavior of
@@ -517,6 +518,77 @@ vector, we can determine if a given clock is reset within the loop portion of
 the trace.
 
 
-* Verification
 * Evaluation
+In this chapter we present the results of several experimental evaluations of
+the SMT conversion process. These tests cover several different benchmarks
+common for bounded model checking programs. For comparison, results are
+presented alongside those of the previous iteration of the TACK program, to
+better judge the improvements made using the new process.
+
+In all of the following tests, the time provided measures the combined time
+taken by i) the TACK program to parse the problem and convert it to SMT form and
+ii) the z3 program to decide the satisfiability of the SMT problem. In practice,
+the time taken by z3 dwarfs the tiem used by the TACK translation, and for the
+problem sizes encounted below the time taken by the TACK translation was always
+negligiable.
+
+All tests were performed on a server equipped with an Intel(R) Core(TM) i7-4770
+CPU (3.40 GHz) with 8 cores, 16 GB of RAM and Debian Linux (version 4.19).
+
+** Fischer Mutual Exclusion Protocol
+The Fischer benchmark models a protocol for ensuring exclusive access to a
+shared common resource that can be requested by multiple processes. The protocol
+uses global variables, integrated into the guards and assignment statements of
+the timed automata, to control access. Each timed automaton in the network has a
+'critical state', and the protocol guarantees that only one timed automaton can
+be in its critical state at a time.
+
+To be more specific, there is a shared variable \(id\), which can take any
+integer value in the range \([0,n]\), where \(n\) is the number of processes in the
+protocol. Each process begins in an 'idle' state \(a\), and in order to reach the
+critical section \(cs\), a process must first check to see that the critical
+section is unoccupied (\(id=0\)), at which point the process writes its own id to
+the shared variable (while entering state \(b\)) and then performs a second
+transition to state \(c\) within 2 seconds of entering state \(b\). The process is
+then required to wait at least 2 seconds in state \(c\). If after that interval
+the value of the shared variable is still equal to its id, the process may access
+the critical section, otherwise it must wait for the value of \(id\) to return
+to \(0\) before trying again (returning to \(b\)). Once access to the critical
+section is granted, the process may remain for an unlimited amount of time before
+returning to state \(a\).
+
+To measure the scalability of our program, we performed multiple test runs while
+modifying the size of the problem. To modify the size, we change the number of
+processes (timed automata) in the network that are attempting to execute their
+critical region. Aside from a numerical id, these processes are identical in
+their behavior. We have tested the Fischer protocol on networks of between 2 and
+10 processes and collected their results.
+
+In addition to testing the scalability of the program, we have also run the
+Fischer protocol through several different MITL properties for verification.
+These properties will be explained below.
+
+- Property 1: \(\mathcal{G}_{[0,\infty)} (p_1.b \Rightarrow \mathcal{F}_{[0,\infty)}p_1.c)\)
+- Property 2: \(\mathcal{G}_{[0,\infty)} (p_1.b \Rightarrow \mathcal{F}_{[0,3]}p_1.c)\)
+- Property 3: \(\mathcal{G}_{[0,\infty)} (p_1.b \Rightarrow \mathcal{F}_{(0,3)}p_1.cs)\)
+- Property 4: \(\mathcal{G}_{[0,\infty)} (p_1.b \Rightarrow \mathcal{F}_{(0,3)}p_1.c)\)
+- Property 5: \(\mathcal{G}_{[0,\infty)} (p_1.b \Rightarrow \mathcal{F}_{[0,3]}p_1.cs)\)
+- Property 6: \(\mathcal{G}_{[0,\infty)} (\neg (\underset{i=1:n-1}{\lor} (p_i.cs \land \underset{j=i+1:n}{\lor} p_j.cs ))) \)
+
+
+Property 1 requires that once process one enters state \(b\), it always
+transitions to state \(c\). Property 2 is similar, however it contains the
+additional constraint that process 1 must complete the transition to state \(c\)
+in at most 3 seconds. Property 3 has a similar time bound, but requires that
+process one move to the critical section \(cs\) rather than \(c\) within the
+time bound, which we expect to not be universally true (a process can return to
+state \(b\) after moving to state \(c\) if another process has reset the
+variable \(id\)). Properties 4 and 5 are copies of properties 2 and 3
+respectively with the sole difference of inclusion vs exclusion at the
+boundaries of the interval. Property 6 seeks to prove the "safety" of the
+protocol, namely that two distinct processes are never in the critical section
+at the same time.
+
+** CSMA/CD
+
 * Conclusion
