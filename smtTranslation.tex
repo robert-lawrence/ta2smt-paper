@@ -1,4 +1,4 @@
-% Created 2020-08-19 mer 22:18
+% Created 2020-08-19 mer 23:03
 % Intended LaTeX compiler: pdflatex
 \documentclass[a4paper,12pt]{article}
 \usepackage[utf8]{inputenc}
@@ -41,7 +41,7 @@
 \tableofcontents
 
 \section{Introduction}
-\label{sec:orgab0e64d}
+\label{sec:org36c1759}
 \iffalse
 Timed Automata are a commonly used representation for modeling the behavior of
 systems with real-time semantics.
@@ -76,9 +76,9 @@ CLTLoc representation. While CLTLoc is an elegant expressive language, there is
 a significant overhead in
 \fi
 \section{Preliminaries}
-\label{sec:org850a575}
+\label{sec:org6e50bd9}
 \subsection{Bit-Vector Logic}
-\label{sec:orgcd74be1}
+\label{sec:org21c4268}
 A BitVector is an array of binary values, or bits. BitVectors are interpreted
 using two's complement arithmetic to produce integer values, and their length
 can be any positive integer (\(\mathbb{Z}^+\)). We use the notation
@@ -108,7 +108,7 @@ operator to the \(i\)th bit of each of the input vectors, following the usual
 convention where \(1\) is true and \(0\) is false.
 
 \subsection{Timed Automata}
-\label{sec:orgab08ef9}
+\label{sec:orga131ac2}
 Let \(AP\) be a set of atomic propositions, and let \(Act\) be a set of
 synchronization events. In addition we define a null event \(\tau\).
 \(Act_{\tau}\) is the set \(Act \cup \{\tau\}\). Let \(X\) be a finite set of
@@ -151,23 +151,35 @@ numerical subscript to the set in question, for example \(X_i\) to refer to the
 clocks used by a specific timed automaton.
 
 \subsection{Bounded Satisfiability Checking}
-\label{sec:orgdf7091a}
+\label{sec:orgae5346c}
 (here sketch both ta->CLTLoc encoding and sbvzot translation)
 \section{TA Encoding}
-\label{sec:org4583caf}
+\label{sec:org3d1f0c9}
 Using BitVector logic, we have the ability to group logically connected
 propositions into a Vector, granting significant speedups on operations
-performed on every element of the vector.
+performed over every element of the vector. We wish to use this property to
+group together logically connected constraints of the encoding. One common
+source of constraint duplication is the transition constraints. These
+constraints enforce the semantics of Timed Automaton transitions, requiring
+that, for example all guards and assignment statements have been fulfilled.
+These constraints must be upheld at every transition in the trace, which can be
+dozens of discrete transitions long. This motivates us to use the BitVectors to
+represent a piece of information changing over time, i.e. representing its value
+at different time instances in the trace.
 
 When encoding the constraints of the system, it is convenient to write that a
 constraint will hold over every discrete time position in the trace. As an
-example, consider a transition with an guard \(x_i < 5\). When formalizing the
-constraints, it would be simpler to have a formula of the type \(transition
-\rightarrow constraint\) that we can assert over every time position at once.
-Therefore we will use BitVectors of length \(k+2\), where each position in the
-BitVector represents the formula at a different moment in time. This allows us
-to use the BitVector implication operator to assert that the transition
-BitVector implies a given constraint at every time instance.
+example, consider a transition with an assignment \(var_i = 5\). When
+formalizing the constraints, it would be simpler to have a formula of the type
+\(\overleftarrow{transition}_{[k+2]} \rightarrow
+\overleftarrow{assignment}_{[k+2]}\) that we can assert over every time position
+at once. In this model we are using BitVectors of length \(k+2\) where each
+position in the BitVector represents the formula at a different moment in time.
+This allows us to use the BitVector implication operator to assert that the
+transition BitVector implies a given constraint at every time instance. At a
+given time instance \(i\), if the corresponding bit in the transition BitVector
+is set to 1, then the same bit in the variable BitVector would be required to be
+set to 1 as well. Otherwise the SMT solver would dismiss the trace as invalid.
 
 This encoding, while convenient, is not very efficient. Using one BitVector per
 each transition yields a space complexity of \(O(|T|k)\). Since only one
@@ -197,9 +209,35 @@ time instances as follows:
 \end{tabular}
 \end{center}
 
+After defining the BitVectors to store the bits of the active transition, we
+define aliases for the \(|T|\) transitions as shown in table \ref{t-aliases}.
+Transition 0 is simply defined as the bit-wise 'and' of the negations of each of
+the \(sb\) BitVectors. Transition 1 differs in that the last BitVector is not
+negated. This corresponds to the BitVector representation of the number 1, which
+is \(00...001\). When viewed in the table, the pattern becomes more clear. Each
+transition is encoded as a unique combination of the \(sb\) vectors. Because
+the exact value of \(|T|\) is unknown, for the last transition in the table we
+use the symbol \(\sim\) to signal that whether or not the BitVector is negated
+depends on the exact value of \(|T|\).
+
+\begin{center}
+\caption{Table \ref{t-aliases}. Construction of the Transition Aliases}
+\begin{tabular}{c | c}
+\label{t-aliases}
+Transition & Alias \\
+\midrule
+T_{i,0} & \(\neg\overleftarrow{sb_{i,\lceil \log_2 n_i \rceil -1}} \BitAnd \neg\overleftarrow{sb_{i,\lceil \log_2 n_i \rceil -2}} \BitAnd \ldots \BitAnd \neg\overleftarrow{sb_{i,1}} \BitAnd \neg\overleftarrow{sb_{i,0}} \) \\
+T_{i,1} & \(\neg\overleftarrow{sb_{i,\lceil \log_2 n_i \rceil -1}} \BitAnd \neg\overleftarrow{sb_{i,\lceil \log_2 n_i \rceil -2}} \BitAnd \ldots \BitAnd \neg\overleftarrow{sb_{i,1}} \BitAnd \overleftarrow{sb_{i,0}} \) \\
+T_{i,2} & \(\neg\overleftarrow{sb_{i,\lceil \log_2 n_i \rceil -1}} \BitAnd \neg\overleftarrow{sb_{i,\lceil \log_2 n_i \rceil -2}} \BitAnd \ldots \BitAnd \overleftarrow{sb_{i,1}} \BitAnd \neg\overleftarrow{sb_{i,0}} \) \\
+\rotatebox{90}{\(\ldots\)} & \rotatebox{90}{\(\ldots\)} \\
+T_{i,|T|} & \(\overleftarrow{sb_{i,\lceil \log_2 n_i \rceil -1}} \BitAnd (\sim\overleftarrow{sb_{i,\lceil \log_2 n_i \rceil -2}}) \BitAnd \ldots \BitAnd (\sim\overleftarrow{sb_{i,1}}) \BitAnd (\sim\overleftarrow{sb_{i,0}}) \) \\
+
+\end{tabular}
+\end{center}
+
 
 \subsection{Transitions}
-\label{sec:org9baf8ad}
+\label{sec:orgf8cccdb}
 
 In the traditional description of Timed Automata, a TA that does not perform a
 discrete transition at a given time instance is said to perform a \(null\
@@ -227,7 +265,7 @@ with \(O(t) = 5\). The base two representation of 5 is \(00101\), and therefore
 \neg tb_4 \BitAnd tb_3 \BitAnd \neg tb_2 \BitAnd tb_1)\).
 
 \subsection{States}
-\label{sec:org949d829}
+\label{sec:org4b9f2fe}
 
 For each TA \(\mathcal{A}_l \in \mathcal{A}\), we define a BitVector to
 represent each state of the timed automaton. To do this we define each state as
@@ -245,7 +283,7 @@ N_q(sb_i)\), where \(N_q(sb_i)\) returns \(sb_i\) if the \(i\)th bit in the base
 two representation of \(O(q)\) is 1, and returns \(\neg sb_i\) otherwise.
 
 \subsection{Variables}
-\label{sec:orgb894ae6}
+\label{sec:orga5fa2c2}
 
 Bounded integer variables are treated slightly differently, because unlike
 states and transitions, the possible values of a bounded integer variable are
@@ -267,14 +305,14 @@ k+1\) is a vector of \(\lambda(v_i)\) bits that represents the value of variable
 
 
 \subsection{Clocks}
-\label{sec:org3ce5305}
+\label{sec:org78e9a82}
 
 Each clock \(c \in \mathcal{C}\) is represented by a function \(c\) that takes
 an integer argument and returns a real number, where the argument represents the
 time position and the return value is the value of the clock at that instance.
 
 \section{Constraints}
-\label{sec:orgc52f2a8}
+\label{sec:org9ef32cc}
 \iffalse
 TODO: mention that the operators \(\lor, \land, \BitOr , \BitAnd, \Rightarrow\) represent
 bvor, bvand, etc. (in background) -  maybe explain how you are exploiting
@@ -282,7 +320,7 @@ bvlogic to write constraints - quick comment
 \fi
 
 \subsection{Initialization \& Progression}
-\label{sec:org80fa11c}
+\label{sec:org3fa6376}
 
 \begin{center}
 \begin{tabular}{c | c | c}
@@ -353,7 +391,7 @@ that assign a value to the variable. When none of these transitions are active,
 formula \(\phi_8\) ensures that the value of \(v\) remains unchanged.
 
 \subsection{Transitions}
-\label{sec:org63a0538}
+\label{sec:orgdaab944}
 
 \begin{center}
 \begin{tabular}{c}
@@ -440,7 +478,7 @@ inequality can be satisfied with equality at the instance of transition, since
 the automaton is not actually in that state at that instant.
 
 \subsection{Sync}
-\label{sec:org144e04c}
+\label{sec:org75f1cdd}
 \begin{center}
 \begin{tabular}{c}
 Sync Constraints \\
@@ -497,7 +535,7 @@ Formulas \(\phi_{16}\) and \(\phi_{18}\) describe these constraints for
 broadcast send and receive, respectively, while formula \(\phi_{17}\) describes
 the 'compulsive' nature of the 'broadcast send' transition.
 \subsection{Loop Constraints}
-\label{sec:orgb47c160}
+\label{sec:org2a5507a}
 
 \begin{center}
 \begin{tabular}{c}
@@ -569,7 +607,7 @@ the trace.
 
 
 \section{Evaluation}
-\label{sec:org42ee625}
+\label{sec:orgae69a98}
 In this chapter we present the results of several experimental evaluations of
 the SMT conversion process. These tests cover several different benchmarks
 common for bounded model checking programs. For comparison, results are
@@ -592,7 +630,7 @@ CPU (3.40 GHz) with 8 cores, 16 GB of RAM and Debian Linux (version 4.19).
 
 
 \subsection{Fischer Mutual Exclusion Protocol}
-\label{sec:orged38383}
+\label{sec:org8d1f675}
 The Fischer benchmark models a protocol for ensuring exclusive access to a
 shared common resource that can be requested by multiple processes. The protocol
 uses global variables, integrated into the guards and assignment statements of
@@ -719,8 +757,10 @@ at the same time.
 \end{center}
 
 \subsection{CSMA/CD}
-\label{sec:orga606723}
+\label{sec:orgd8a8f9c}
+\subsection{Token Ring}
+\label{sec:org7a3c316}
 
 \section{Conclusion}
-\label{sec:org999d1a6}
+\label{sec:orgc2200da}
 \end{document}

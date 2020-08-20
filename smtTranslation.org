@@ -124,17 +124,29 @@ clocks used by a specific timed automaton.
 * TA Encoding
 Using BitVector logic, we have the ability to group logically connected
 propositions into a Vector, granting significant speedups on operations
-performed on every element of the vector.
+performed over every element of the vector. We wish to use this property to
+group together logically connected constraints of the encoding. One common
+source of constraint duplication is the transition constraints. These
+constraints enforce the semantics of Timed Automaton transitions, requiring
+that, for example all guards and assignment statements have been fulfilled.
+These constraints must be upheld at every transition in the trace, which can be
+dozens of discrete transitions long. This motivates us to use the BitVectors to
+represent a piece of information changing over time, i.e. representing its value
+at different time instances in the trace.
 
 When encoding the constraints of the system, it is convenient to write that a
 constraint will hold over every discrete time position in the trace. As an
-example, consider a transition with an guard \(x_i < 5\). When formalizing the
-constraints, it would be simpler to have a formula of the type \(transition
-\rightarrow constraint\) that we can assert over every time position at once.
-Therefore we will use BitVectors of length \(k+2\), where each position in the
-BitVector represents the formula at a different moment in time. This allows us
-to use the BitVector implication operator to assert that the transition
-BitVector implies a given constraint at every time instance.
+example, consider a transition with an assignment \(var_i = 5\). When
+formalizing the constraints, it would be simpler to have a formula of the type
+\(\overleftarrow{transition}_{[k+2]} \rightarrow
+\overleftarrow{assignment}_{[k+2]}\) that we can assert over every time position
+at once. In this model we are using BitVectors of length \(k+2\) where each
+position in the BitVector represents the formula at a different moment in time.
+This allows us to use the BitVector implication operator to assert that the
+transition BitVector implies a given constraint at every time instance. At a
+given time instance \(i\), if the corresponding bit in the transition BitVector
+is set to 1, then the same bit in the variable BitVector would be required to be
+set to 1 as well. Otherwise the SMT solver would dismiss the trace as invalid.
 
 This encoding, while convenient, is not very efficient. Using one BitVector per
 each transition yields a space complexity of \(O(|T|k)\). Since only one
@@ -159,6 +171,32 @@ time instances as follows:
 |                               1 | \(\overleftarrow{sb_{i,1}}_{[k+2]}\)                            |
 |                             ... | ...                                                             |
 | \(\lceil \log_2 n_i \rceil -1\) | \(\overleftarrow{sb_{i, \lceil \log_2 n_i \rceil -1}}_{[k+2]}\) |
+
+After defining the BitVectors to store the bits of the active transition, we
+define aliases for the \(|T|\) transitions as shown in table \ref{t-aliases}.
+Transition 0 is simply defined as the bit-wise 'and' of the negations of each of
+the \(sb\) BitVectors. Transition 1 differs in that the last BitVector is not
+negated. This corresponds to the BitVector representation of the number 1, which
+is \(00...001\). When viewed in the table, the pattern becomes more clear. Each
+transition is encoded as a unique combination of the \(sb\) vectors. Because
+the exact value of \(|T|\) is unknown, for the last transition in the table we
+use the symbol \(\sim\) to signal that whether or not the BitVector is negated
+depends on the exact value of \(|T|\).
+
+\begin{center}
+\caption{Table \ref{t-aliases}. Construction of the Transition Aliases}
+\begin{tabular}{c | c}
+\label{t-aliases}
+Transition & Alias \\
+\midrule
+T_{i,0} & \(\neg\overleftarrow{sb_{i,\lceil \log_2 n_i \rceil -1}} \BitAnd \neg\overleftarrow{sb_{i,\lceil \log_2 n_i \rceil -2}} \BitAnd \ldots \BitAnd \neg\overleftarrow{sb_{i,1}} \BitAnd \neg\overleftarrow{sb_{i,0}} \) \\
+T_{i,1} & \(\neg\overleftarrow{sb_{i,\lceil \log_2 n_i \rceil -1}} \BitAnd \neg\overleftarrow{sb_{i,\lceil \log_2 n_i \rceil -2}} \BitAnd \ldots \BitAnd \neg\overleftarrow{sb_{i,1}} \BitAnd \overleftarrow{sb_{i,0}} \) \\
+T_{i,2} & \(\neg\overleftarrow{sb_{i,\lceil \log_2 n_i \rceil -1}} \BitAnd \neg\overleftarrow{sb_{i,\lceil \log_2 n_i \rceil -2}} \BitAnd \ldots \BitAnd \overleftarrow{sb_{i,1}} \BitAnd \neg\overleftarrow{sb_{i,0}} \) \\
+\rotatebox{90}{\(\ldots\)} & \rotatebox{90}{\(\ldots\)} \\
+T_{i,|T|} & \(\overleftarrow{sb_{i,\lceil \log_2 n_i \rceil -1}} \BitAnd (\sim\overleftarrow{sb_{i,\lceil \log_2 n_i \rceil -2}}) \BitAnd \ldots \BitAnd (\sim\overleftarrow{sb_{i,1}}) \BitAnd (\sim\overleftarrow{sb_{i,0}}) \) \\
+
+\end{tabular}
+\end{center}
 
 
 ** Transitions
@@ -669,5 +707,6 @@ at the same time.
 \end{center}
 
 ** CSMA/CD
+** Token Ring
 
 * Conclusion
