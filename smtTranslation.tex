@@ -20,12 +20,15 @@
 \usepackage{setspace}
 \newcommand*\BitAnd{\mathbin{\&}}
 \newcommand*\BitOr{\mathbin{|}}
+\newcommand{\BitNeg}{\ !}
 \newcommand*\ShiftLeft{\ll}
 \newcommand*\ShiftRight{\gg}
 \renewcommand{\arraystretch}{1.0}
 \setlength{\parskip}{1em}
 \setlength{\abovetopsep}{0.5em}
 \renewcommand{\baselinestretch}{1.3}
+\newcommand{\cltloc}{CLTLoc}
+\newcommand{\aez}{ae2sbvzot}
 \author{Robert Smith}
 \date{\today}
 \title{SMT Translation}
@@ -69,35 +72,6 @@ CLTLoc representation. While CLTLoc is an elegant expressive language, there is
 a significant overhead in
 \fi
 \section{Preliminaries}\label{prelims}
-\subsection{Bit-Vector Logic}\label{bvlogic}
-A BitVector is an array of binary values, or bits. BitVectors are interpreted
-using two's complement arithmetic to produce integer values, and their length
-can be any positive integer (\(\mathbb{Z}^+\)). We use the notation
-\(\overleftarrow{x}_{[n]}\) to represent a BitVector \(x\) of length \(n\), but
-this can be simplified to \(\overleftarrow{x}\) if the length is clear. Bits are
-numbered from right to left, with the rightmost, least significant bit labeled
-as 0, and the leftmost, most significant bit labeled as \(n-1\). As an example,
-the constant vector \(-4\) of length 5 would be written as
-\(\overleftarrow{-4}_{[5]}\), which would expand to \(11100\). We can also
-reference individual bits in the vector using the notation
-\(\overleftarrow{x}_{[n]}^{[i]}\) to \(extract\) the \(i\)th bit from the
-BitVector \(x\). It is also possible to extract a sub-vector with the notation
-\(\overleftarrow{x}_{[n]}^{[j:i]}\), where \(n>j\geq i\geq 0\). This extracts a
-vector of length \(j-i+1\) whose rightmost bit corresponds to the \(i\)th bit of
-\(x\) and whose leftmost bit corresponds to the \(j\)th. Similarly,
-\(concatenation\) operates on two BitVectors by combining their bit arrays.
-\(\overleftarrow{x}_{[n]} :: \overleftarrow{y}_{[m]}\) returns a new BitVector
-\(\overleftarrow{z}_{[n+m]}\) where \(\overleftarrow{z}^{[m-1:0]} =
-\overleftarrow{y}\), and \(\overleftarrow{z}^{[m+n-1:m]} = \overleftarrow{x}\).
-
-The usual arithmetic operations of addition \(+\) and subtraction \(-\) are
-defined over two BitVectors of the same length. BitVectors also support the
-bit-wise operators not \(\neg\), disjuction \(\lor\), conjunction \(\land\),
-equivalence \(\iff\), and implication \(\Rightarrow\). These binary operators return a
-new BitVector where each bit \(i\) is the result of applying the logical
-operator to the \(i\)th bit of each of the input vectors, following the usual
-convention where \(1\) is true and \(0\) is false.
-
 \subsection{Timed Automata}\label{timed-automata}
 Let \(AP\) be a set of atomic propositions, and let \(Act\) be a set of
 synchronization events. In addition we define a null event \(\tau\).
@@ -144,7 +118,42 @@ clocks used by a specific timed automaton.
 
 (here sketch both ta->CLTLoc encoding and sbvzot translation)
 
-\subsection{TACK CLTLoc Translation}\label{prelim-tack}
+\subsection{Constraint LTL Over Clocks}\label{cltloc}
+
+\cltloc\ is a temporal logic that allows for the construction of formulas
+defined over atomic propositions, clocks, and arithmetic variables. A clock is a
+variable over \(\mathbb{R}_{\geq 0}\) whose value changes between LTL positions
+to model the passage of time. Like clocks in timed automata, clocks can be
+reset back to zero.
+
+A formula in \cltloc\ consists of atomic propositions, clock formulas, and
+formulas over integer variables, which are combined using the standard LTL
+operators of \(\mathcal{X}\) (next) and \(\mathcal{U}\) (until), as well as the
+derived overators \(\mathcal{G}\) (globally), \(\mathcal{F}\) (future), and
+\(\mathcal{R}\) (release). A clock formula compares the value of the clock to a
+given natural number, for instance \(x > 7\). A variable formula, on the other
+hand, can compare not only individual variables but also arithmetic combinations
+of variables. An example would be the expression \(b - c = 7\); \(b,c \in Int\).
+
+Let \(X\) be a finite set of clocks and \(Int\) be a finite set of integer
+variables. \cltloc\ formulas are defined as follows:
+\[\phi := a \BitOr x \sim c \BitOr \exp \sim \exp \BitOr \mathcal{X}(n) \sim \exp \BitOr \phi \land \phi \BitOr \neg \phi \BitOr \mathcal{X}\phi \BitOr \phi \mathcal{U} \phi \]
+Where \(a \in AP\), \(x \in X\), \(c \in \mathbb{n}\), \(n \in Int\), and
+\(exp\) are arithmetic formula over integer variables. As mentioned before,
+clocks are special dense variables over \(\mathbb{R}_{\geq 0}\) that `progress'
+between different LTL positions. To be more specific, each clock must either
+increment between two adjacent time instances, or it must be reset. To maintain
+a consistent view of time, we introduce
+\(\delta: \mathbb{N} \rightarrow \mathbb{R}_{>0}\), which measures the amount of
+time that elapses between two adjacent time instances. For a given clock
+`valuation' \(\sigma: \mathbb{N} \times X \rightarrow \mathbb{R}_{\geq 0}\),
+each clock \(x \in X\) must either obey the equivalence
+\(\sigma(i,x) + \delta(i) = \sigma(i+1,x)\), or is reset, i.e.\
+\(\sigma(i+1,x) = 0\). This ensures that all clocks progress at the same rate,
+and we can use \(\delta(t)\) to calculate the amount of time elapsed between any
+two positions.
+
+\subsection{TACK \cltloc\ Translation}\label{prelim-tack}
 
 \begin{table}\label{tack-encoding}
   \centering
@@ -159,7 +168,20 @@ clocks used by a specific timed automaton.
                                                                  \(\varphi := \underset{n \in Int}{\bigwedge} n = v_{var}^0 (n) \) &
                                                                                                                                      \(\varphi := \underset{k \in [1,K]}{\bigwedge} Inv(l[k])\) \\
     \midrule
-    \(\varphi\)
+    \(\varphi {:=} \underset{x \in X}{\bigwedge} (x_{0} {=} 0 \land x_{1} {>} 0 \land x_{v} {=} 0)\) &  \multicolumn{2}{c}{\( \varphi(j) {:=} \underset{x \in X}{\bigwedge} (x_{j} {=} 0) {\rightarrow} \mathcal{X}\left( (x_{(j{+}1){\mod 2}} = 0) \mathcal{R}\big( (x_{v}{=}j){\land}(x_{j}{>}0) \big) \right) \)} \\
+    \midrule
+    \multicolumn{3}{c}{\(\varphi := \underset{q \in \mathcal{Q}_{k}}{\underset{k \in [1,K]}{\bigwedge}} \bigg( \Big( l[k] = q \land t[k] = \sharp \Big) \rightarrow \mathcal{X} \Big( Inv(q) \land r_{1}(Inv(q)) \Big) \bigg) \)} \\
+    \midrule
+    \multicolumn{3}{c}{\( \varphi := \underset{t \in T_{k}}{\underset{k \in [1,K]}{\bigwedge}} t[k] = t \rightarrow \Big( l[k] = t_{-} \land \mathcal{X}(l[k] = t_{+}) \land \varphi_{\gamma_{c}} \land \varphi_{\gamma_{v}} \land \varphi_{\alpha_{c}} \land \varphi_{\alpha_{v}}  \land \varphi_{edge}(t_{-}, t_{+}, k) \Big) \)} \\
+    \multicolumn{3}{c}{\( \varphi_{edge}(a,b,i) := \varphi_{\alpha](}(a,b,i) \lor \varphi_{\alpha)[}(a,b,i) \)} \\
+  %  \multicolumn{3}{c}{\( \varphi_{\alpha](}(a,b,i) := Inv(a) \land r_{2}(Inv_{w}(b)) \land edge^{](}[i] \)} \\
+    \multicolumn{3}{c}{\( \varphi_{\alpha)[}(a,b,i) := Inv_{w}(a) \land r_{2}(Inv(b)) \land \neg edge^{](}[i] \)} \\
+    \midrule
+    \multicolumn{3}{c}{\( \varphi := \underset{k \in [1,K]; q,q^{'} \in \mathcal{Q}_{k} | q \neq q^{'}}{\bigwedge} \bigg( \Big( (l[k] = q) \land \mathcal{X}(l[k] = q^{'}) \Big) \rightarrow \underset{t \in T_{k} | t_{-} = q, t_{+} = q^{'}}{\bigvee} (t[k] = t) \bigg) \)} \\
+    \midrule
+    \multicolumn{3}{c}{\( \varphi := \underset{x \in X}{\bigwedge} \bigg( \mathcal{X}(x_{0} = 0 \lor x_{1} = 0) \rightarrow \underset{t \in T_{k} | x \in t_{a_{c}}}{\underset{k \in [1,K]} {\bigvee}} t[k] = t \bigg) \)} \\
+    \midrule
+    \multicolumn{3}{c}{\( \varphi := \underset{n \in Int}{\bigwedge} \bigg( (\neg(n = \mathcal{X}(n))) \rightarrow \underset{t \in T_{k} | n \in t_{a_{v}}}{\underset{k \in [1,K]}{\bigvee}} t[k] = t \bigg) \)}
   \end{tabular}
 \end{table}
 
@@ -185,6 +207,111 @@ each variable \(n \in Int\) to its initial value, and the third ensures that the
 invariants of each initial state hold in the initial position. Note that there
 is no explicit clock initialization, since in CLTLoc all clocks have a value of
 \(0\) at time \(0\).
+
+\subsection{Bit-Vector Logic}\label{bvlogic}
+A BitVector is an array of binary values, or bits. BitVectors are interpreted
+using two's complement arithmetic to produce integer values, and their length
+can be any positive integer (\(\mathbb{Z}^+\)). We use the notation
+\(\overleftarrow{x}_{[n]}\) to represent a BitVector \(x\) of length \(n\), but
+this can be simplified to \(\overleftarrow{x}\) if the length is clear. Bits are
+numbered from right to left, with the rightmost, least significant bit labeled
+as 0, and the leftmost, most significant bit labeled as \(n-1\). As an example,
+the constant vector \(-4\) of length 5 would be written as
+\(\overleftarrow{-4}_{[5]}\), which would expand to \(11100\). We can also
+reference individual bits in the vector using the notation
+\(\overleftarrow{x}_{[n]}^{[i]}\) to \(extract\) the \(i\)th bit from the
+BitVector \(x\). It is also possible to extract a sub-vector with the notation
+\(\overleftarrow{x}_{[n]}^{[j:i]}\), where \(n>j\geq i\geq 0\). This extracts a
+vector of length \(j-i+1\) whose rightmost bit corresponds to the \(i\)th bit of
+\(x\) and whose leftmost bit corresponds to the \(j\)th. Similarly,
+\(concatenation\) operates on two BitVectors by combining their bit arrays.
+\(\overleftarrow{x}_{[n]} :: \overleftarrow{y}_{[m]}\) returns a new BitVector
+\(\overleftarrow{z}_{[n+m]}\) where \(\overleftarrow{z}^{[m-1:0]} =
+\overleftarrow{y}\), and \(\overleftarrow{z}^{[m+n-1:m]} = \overleftarrow{x}\).
+
+The usual arithmetic operations of addition \(+\) and subtraction \(-\) are
+defined over two BitVectors of the same length. BitVectors also support the
+bit-wise operators not \(\neg\), disjuction \(\lor\), conjunction \(\land\),
+equivalence \(\iff\), and implication \(\Rightarrow\). These binary operators return a
+new BitVector where each bit \(i\) is the result of applying the logical
+operator to the \(i\)th bit of each of the input vectors, following the usual
+convention where \(1\) is true and \(0\) is false.
+
+
+\subsection{AE2SBVZOT}\label{zot-encoding}
+
+The final program to mention is \aez, which is a BitVector-based plugin for Zot.
+It accepts CLTL formulas and converts them to BitVector logic, which it then
+sends to Microsoft's Z3 to solve.
+
+\begin{table}
+  \centering
+  \caption{An example \aez\ trace showing loop variables.}
+  \begin{tabular}{l|c c c c c}
+    BitVector & \textbf{4} & 3 & \textbf{2} & 1 & 0 \\
+    \midrule
+    \(\overleftarrow{foo}\)            & \textbf{1} & 0 & \textbf{1} & 1 & 0 \\
+    \(\overleftarrow{\neg foo}\)       & \textbf{0} & 1 & \textbf{0} & 0 & 1 \\
+    \(\overleftarrow{\mathcal{X}foo}\) & \textbf{0} & 1 & \textbf{0} & 1 & 1 \\
+
+    \midrule
+    \(\overleftarrow{lpos}\)           & 0 & 0 & 0 & 1 & 0 \\
+    \(\overleftarrow{inloop}\)         & 1 & 1 & 1 & 0 & 0
+
+  \end{tabular}
+  \label{table:zotloop}
+ \end{table}
+
+To model the lasso shape of runs, \aez\ adds an additional position to the
+BitVector that represents the `loopback' position, or the first position of the
+next iteration of the loop. This position becomes the left-most, most
+significant bit of the vector. To separate the lasso from the initial portion of
+the trace, \aez\ defines two special BitVectors, \(\overleftarrow{lpos}\) and
+\(\overleftarrow{inloop}\). In table \ref{table:zotloop} we can see an example formula,
+\(foo\), along with the corresponding vectors \(\overleftarrow{lpos}\) and
+\(\overleftarrow{inloop}\). We can see that \(\overleftarrow{lpos}\) has a value
+of 2, meaning that bit 2 is the first position in the loop. Looking at the table
+we can see that the columns for bits 2 and 4 are in bold, to represent that 4,
+being the `loopback' position, is a copy of position 2, and therefore all
+formulas have identical values in these positions. Meanwhile
+\(\overleftarrow{inloop}\) highlights that bits 0 and 1 are \textbf{not} in the
+loop portion of the trace, while the rest of the positions are. The infinite
+trace therefore would begin in position 0, move to position 1, and then repeat
+the infinite sequence of positions \([232323\ldots]\).
+
+Given a formula with a bound of \(k\), \aez\ constructs a BitVector for the
+formula and for each subformula with a length of \(k{+}2\). It adds an extra
+position both at the beginning (bit 0) to represent the initial configuration of
+the system, as well as at the end (bit \(k{+}1\)) to represent the loopback
+position as discussed. Each formula is then represented as a formula over its
+component subformulas based on the rules in \ref{table:zot-constraints}. Because
+\aez\ is bi-directional, it includes versions of \(\mathcal{X}\) and
+\(\mathcal{R}\) that operate in the past, \(\mathcal{Y}\) (yesterday) and
+\(\mathcal{S}\) (since) respectively.
+
+\begin{table}
+  \centering
+  \setstretch{0.7}
+  \caption{\aez\ definition of a proposition \(\varphi\)}
+  \begin{tabular}{c c}
+    \(\phi\) & Encoding \\
+    \midrule
+    \(\neg \varphi\)                & \(\overleftarrow{(\neg \varphi)} =\BitNeg\overleftarrow{(\varphi)}\) \\
+    \(\varphi_{1} \land \varphi_{2}\)& \(\overleftarrow{(\varphi_{1} \land \varphi_{2})} = \overleftarrow{(\varphi_{1})} \BitAnd \overleftarrow{(\varphi_{2})} \) \\
+    \(\varphi_{1} \lor \varphi_{2}\)& \(\overleftarrow{(\varphi_{1} \lor \varphi_{2})} = \overleftarrow{(\varphi_{1})} \BitOr \overleftarrow{(\varphi_{2})} \) \\
+    \midrule
+    \(\mathcal{Y}\varphi\)         & \(\overleftarrow{(\mathcal{Y}\varphi)} =\ \ll \overleftarrow{(\varphi)}\) \\
+    \(\varphi_{1}\mathcal{S}\varphi_{2}\) & \( \overleftarrow{(\varphi_{1}\mathcal{S}\varphi_{2})}^{[k{+}1:0]} = \biggl(\overleftarrow{(\varphi_{2})}^{[k{+}1:1]} \BitOr \bigl( \overleftarrow{(\varphi_{1})}^{[k{+}1:1]} \BitAnd \) \\
+             & \(\overleftarrow{(\varphi_{1}\mathcal{S}\varphi_{2})}^{[k:0]}\bigr) \biggr) :: \overleftarrow{(\varphi_{2})}^{[0]} \) \\
+    \(\mathcal{X} \varphi\)        & \(\overleftarrow{(\mathcal{X}\varphi)}^{[k:0]} = \overleftarrow{(\varphi)}^{[k{+}1:1]} \) \\
+    \(\varphi_{1} \mathcal{U} \varphi_{2}\) & \(\overleftarrow{(\varphi_{1} \mathcal{U} \varphi_{2})}^{[k:0]} = \overleftarrow{(\varphi_{2})}^{[k:0]} \BitOr \bigl( \overleftarrow{(\varphi_{1})}^{[k:0]} \BitAnd \overleftarrow{(\varphi_{1} \mathcal{U} \varphi_{2})}^{[k{+}1:1]} \bigr) \) \\
+             & \(\land \biggl( \Bigl( \big( \overleftarrow{(\varphi_{1})}^{[k{+}1]} \BitOr \overleftarrow{(\varphi_{2})}^{[k{+}1]} \BitOr !\overleftarrow{(\varphi_{1} \mathcal{U} \varphi_{2})}^{[k{+}1]} \big) \BitAnd\) \\
+             & \( \big( !\overleftarrow{(\varphi_{2})}^{[k{+}1]} \BitOr \overleftarrow{(\varphi_{1} \mathcal{U} \varphi_{2})}^{[k{+}1]}\big) \Bigr) = 1 \biggr) \land \) \\
+    & \( \big( \overleftarrow{(\varphi_{1} \mathcal{U} \varphi_{2})}^{[k{+}1]} \Rightarrow \Uparrow \bigl( \overleftarrow{(\varphi_{2})} \BitAnd \overleftarrow{(inloop)} \bigr) = 1 \big) \)
+
+  \end{tabular}
+  \label{table:zot-constraints}
+ \end{table}
 
 \section{TA Encoding}\label{encoding}
 
