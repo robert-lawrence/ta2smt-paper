@@ -42,18 +42,6 @@
 Timed Automata are a commonly used representation for modeling the behavior of
 systems with real-time semantics.
 
-Bounded Satisfiability Checking is a process in which timed automata can be
-verified against a property. The TA system along with the desired property are
-converted into a format suitable for parsing by a SAT or SMT solver. Then the
-solver is tasked with finding a counterexample to the property. Since TA traces
-are infinite in length, we restrict ourselves to traces of the form
-\(s_1 s_2,\ldots s_{l-1}{(s_l s_{l+1}\ldots s_{n-1}s_n)}^\omega\). These
-lasso-shaped traces consist of an initial sequence of states up until
-\(s_{l-1}\), followed by a loop that can be repeated an infinite amount of
-times to form the full trace. Since the beginning of the loop is allowed to
-occur anywhere within the sequence, the only variable is the number of distinct
-states \(n\). Bounded Satisfiability Checking refers to checking if a given
-property is satisfied over lasso-shaped traces of up to length \(n\).
 
 Current examples of TA bounded model checkers include XX, YY, and de facto
 standard Uppaal. TACK is a tool focused on allowing for the expression of TA
@@ -89,9 +77,9 @@ variable constraints, where a variable constraint \(\gamma\) is defined as
 \(\gamma := n \sim c\BitOr n \sim n'\BitOr \neg \gamma\BitOr \gamma \land \gamma\),
 where \(n\) and \(n'\) are integer variables, \(c \in \mathbb{Z}\), and
 \(\sim \in \{<,=\}\). A Timed Automaton with variables is defined as the tuple
-\(\mathcal{A} = \big \langle AP,X, Act_{\tau}, Int, Q, q_0, v_{var}^0, Inv, L, T \big \rangle\).
+\(\mathcal{A} = \big \langle AP,X, Act_{\tau}, Int, Q, q^0, v_{var}^0, Inv, L, T \big \rangle\).
 In this tuple \(Q\) is the finite set of states of the timed automaton,
-\(q_0 \in Q\) is the initial state of the TA,
+\(q^0 \in Q\) is the initial state of the TA,
 \(v_{var}^{0} : Int \rightarrow \mathbb{Z}\) is a function providing initial
 values for each of the variables, and \(Inv : Q \rightarrow \Gamma(X)\) is a
 function assigning each state to a (possibly empty) set of clock constraints.
@@ -119,6 +107,27 @@ clocks used by the specific timed automaton \(\mathcal{A}_{i} \in \mathcal{A}\).
 
 \subsection{Bounded Satisfiability Checking}\label{bounded-sat}
 
+When using Timed Automata to model real-time systems, a common desire is to
+verify that every valid trace of the system obeys a given constraint, or
+property. Problems of feasibility quickly arise however, due to the infinite
+length of these traces. Bounded Satisfiability Checking is a process in which
+timed automata traces of infinite length can be efficiently verified against a
+property. Since TA traces are infinite in
+length, we restrict ourselves to traces of the form
+\(s_0 s_1\ldots s_{l-1}{(s_l s_{l+1}\ldots s_{k-1}s_k)}^\omega\). These
+lasso-shaped traces consist of an initial sequence of states up until
+\(s_{l-1}\), followed by a loop that can be repeated an infinite amount of times
+to form the full trace. Since the beginning of the loop is allowed to occur
+anywhere within the sequence, the only variable is the number of distinct states
+\(k\). Bounded Satisfiability Checking refers to checking if a given property is
+satisfied over lasso-shaped traces of up to length \(k\).
+The TA system along with the desired property are converted into a
+format suitable for parsing by a SAT or SMT solver. Then the solver is tasked
+with finding a counterexample to the property. If a counterexample is able to be
+found, then there exists at least one trace that does not satisfy the provided
+property. Otherwise, the property is said to have been verified over the TA
+network up to the bound \(k\), as the solver has shown that no lasso-shaped
+traces of length \(k\) exist that contradict the property.
 
 \subsection{Constraint LTL Over Clocks}\label{cltloc}
 
@@ -157,18 +166,19 @@ two positions.
 
 \subsection{TACK \cltloc\ Translation}\label{prelim-tack}
 
-The TACK tool developed by Menghi converts Bounded Satisfiability Checking
-problems into the CLTLoc language. TACK uses Metric Interval Temporal Logic to
-specify the property to be checked for satisfiabilty. The choice of MITL allows
-for more elegant and powerful specifications of the desired properties to be
-checked. Once the Timed Automata network and the MITL property have been
-converted into CLTLoc, TACK then uses the tool Zot to convert this intermediate
-represetation of the problem into the SMT-LIB2 language, which is supported by
-many modern SMT solvers. Zot was designed with a modular architecture to allow
-for several different strategies and algorithms that can be used to convert its
-input. Currently the most successful Zot plugin for CLTLoc Bounded Model
-Checking is ae2sbvzot. We will provide an overview of both the TACK encoding of
-Timed Automata in CLTLoc and the ae2sbvzot translation of CLTLoc into SMT-LIB2.
+The TACK\cite{tack20:1} tool developed by Menghi et al.\ converts Bounded
+Satisfiability Checking problems into the CLTLoc language. TACK uses Metric
+Interval Temporal Logic to specify the property to be checked for satisfiabilty,
+which allows for more compact and powerful specifications of the desired
+properties to be checked. Once the Timed Automata network and the MITL property
+have been converted into CLTLoc, TACK then uses the tool Zot to convert this
+intermediate represetation of the problem into the SMT-LIB2 language, which is
+supported by many modern SMT solvers. Zot was designed with a modular
+architecture to allow for several different strategies and algorithms that can
+be used to convert its input. Currently the most successful Zot plugin for
+CLTLoc Bounded Model Checking is ae2sbvzot. We will provide an overview of both
+the TACK encoding of Timed Automata in CLTLoc and the ae2sbvzot translation of
+CLTLoc into SMT-LIB2.
 
 \begin{table}\label{tack-encoding}
   \centering
@@ -179,24 +189,24 @@ Timed Automata in CLTLoc and the ae2sbvzot translation of CLTLoc into SMT-LIB2.
   \caption{TACK Encoding of an Automaton in CLTLoc}
   \begin{tabular}{c|c|c}
     \toprule
-    \(\varphi := \underset{i \in [1,N]}{\bigwedge} (l[i] = 0)\) &
-                                                                 \(\varphi := \underset{n \in Int}{\bigwedge} n = v_{var}^0 (n) \) &
-                                                                                                                                     \(\varphi := \underset{i \in [1,N]}{\bigwedge} Inv(l[i])\) \\
+    \(\varphi_{1} := \underset{i \in [1,N]}{\bigwedge} (l[i] = 0)\) &
+                                                                 \(\varphi_{2} := \underset{n \in Int}{\bigwedge} n = v_{var}^0 (n) \) &
+                                                                                                                                     \(\varphi_{3} := \underset{i \in [1,N]}{\bigwedge} Inv(l[i])\) \\
     \midrule
-    \(\varphi {:=} \underset{x \in X}{\bigwedge} (x_{0} {=} 0 \land x_{1} {>} 0 \land x_{v} {=} 0)\) &  \multicolumn{2}{c}{\( \varphi(j) {:=} \underset{x \in X}{\bigwedge} (x_{j} {=} 0) {\rightarrow} \mathcal{X}\left( (x_{(j{+}1){\mod 2}} = 0) \mathcal{R}\big( (x_{v}{=}j){\land}(x_{j}{>}0) \big) \right) \)} \\
+    \(\varphi_{4} {:=} \underset{x \in X}{\bigwedge} (x_{0} {=} 0 \land x_{1} {>} 0 \land x_{v} {=} 0)\) &  \multicolumn{2}{c}{\( \varphi_{5}(j) {:=} \underset{x \in X}{\bigwedge} (x_{j} {=} 0) {\rightarrow} \mathcal{X}\left( (x_{(j{+}1){\mod 2}} = 0) \mathcal{R}\big( (x_{v}{=}j){\land}(x_{j}{>}0) \big) \right) \)} \\
     \midrule
-    \multicolumn{3}{c}{\(\varphi := \underset{q \in \mathcal{Q}_{i}}{\underset{i \in [1,N]}{\bigwedge}} \bigg( \Big( l[i] = q \land t[i] = \sharp \Big) \rightarrow \mathcal{X} \Big( Inv(q) \land r_{1}(Inv(q)) \Big) \bigg) \)} \\
+    \multicolumn{3}{c}{\(\varphi_{6} := \underset{q \in \mathcal{Q}_{i}}{\underset{i \in [1,N]}{\bigwedge}} \bigg( \Big( l[i] = q \land t[i] = \sharp \Big) \rightarrow \mathcal{X} \Big( Inv(q) \land r_{1}(Inv(q)) \Big) \bigg) \)} \\
     \midrule
-    \multicolumn{3}{c}{\( \varphi := \underset{t \in T_{i}}{\underset{i \in [1,N]}{\bigwedge}} t[i] = t \rightarrow \Big( l[i] = t_{-} \land \mathcal{X}(l[i] = t_{+}) \land \varphi_{\gamma_{c}} \land \varphi_{\gamma_{v}} \land \varphi_{\alpha_{c}} \land \varphi_{\alpha_{v}}  \land \varphi_{edge}(t_{-}, t_{+}, i) \Big) \)} \\
+    \multicolumn{3}{c}{\( \varphi_{7} := \underset{t \in T_{i}}{\underset{i \in [1,N]}{\bigwedge}} t[i] = t \rightarrow \Big( l[i] = t_{-} \land \mathcal{X}(l[i] = t_{+}) \land \varphi_{\gamma_{c}} \land \varphi_{\gamma_{v}} \land \varphi_{\alpha_{c}} \land \varphi_{\alpha_{v}}  \land \varphi_{edge}(t_{-}, t_{+}, i) \Big) \)} \\
     \multicolumn{3}{c}{\( \varphi_{edge}(a,b,i) := \varphi_{\alpha](}(a,b,i) \lor \varphi_{\alpha)[}(a,b,i) \)} \\
   %  \multicolumn{3}{c}{\( \varphi_{\alpha](}(a,b,i) := Inv(a) \land r_{2}(Inv_{w}(b)) \land edge^{](}[i] \)} \\
     \multicolumn{3}{c}{\( \varphi_{\alpha)[}(a,b,i) := Inv_{w}(a) \land r_{2}(Inv(b)) \land \neg edge^{](}[i] \)} \\
     \midrule
-    \multicolumn{3}{c}{\( \varphi := \underset{i \in [1,N]; q,q^{'} \in \mathcal{Q}_{i} | q \neq q^{'}}{\bigwedge} \bigg( \Big( (l[i] = q) \land \mathcal{X}(l[i] = q^{'}) \Big) \rightarrow \underset{t \in T_{i} | t_{-} = q, t_{+} = q^{'}}{\bigvee} (t[i] = t) \bigg) \)} \\
+    \multicolumn{3}{c}{\( \varphi_{8} := \underset{i \in [1,N]; q,q^{'} \in \mathcal{Q}_{i} | q \neq q^{'}}{\bigwedge} \bigg( \Big( (l[i] = q) \land \mathcal{X}(l[i] = q^{'}) \Big) \rightarrow \underset{t \in T_{i} | t_{-} = q, t_{+} = q^{'}}{\bigvee} (t[i] = t) \bigg) \)} \\
     \midrule
-    \multicolumn{3}{c}{\( \varphi := \underset{x \in X}{\bigwedge} \bigg( \mathcal{X}(x_{0} = 0 \lor x_{1} = 0) \rightarrow \underset{t \in T_{i} | x \in t_{a_{c}}}{\underset{i \in [1,N]} {\bigvee}} t[i] = t \bigg) \)} \\
+    \multicolumn{3}{c}{\( \varphi_{9} := \underset{x \in X}{\bigwedge} \bigg( \mathcal{X}(x_{0} = 0 \lor x_{1} = 0) \rightarrow \underset{t \in T_{i} | x \in t_{a_{c}}}{\underset{i \in [1,N]} {\bigvee}} t[i] = t \bigg) \)} \\
     \midrule
-    \multicolumn{3}{c}{\( \varphi := \underset{n \in Int}{\bigwedge} \bigg( (\neg(n = \mathcal{X}(n))) \rightarrow \underset{t \in T_{i} | n \in t_{a_{v}}}{\underset{i \in [1,N]}{\bigvee}} t[i] = t \bigg) \)}
+    \multicolumn{3}{c}{\( \varphi_{10} := \underset{n \in Int}{\bigwedge} \bigg( (\neg(n = \mathcal{X}(n))) \rightarrow \underset{t \in T_{i} | n \in t_{a_{v}}}{\underset{i \in [1,N]}{\bigvee}} t[i] = t \bigg) \)}
   \end{tabular}
 \end{table}
 
@@ -296,14 +306,11 @@ formula and for each subformula with a length of \(k{+}2\). It adds an extra
 position both at the beginning (bit 0) to represent the initial configuration of
 the system, as well as at the end (bit \(k{+}1\)) to represent the loopback
 position as discussed. Each formula is then represented as a formula over its
-component subformulas based on the rules in table \ref{table:zot-constraints}. Because
-\aez\ is bi-directional, it includes versions of \(\mathcal{X}\) and
-\(\mathcal{R}\) that operate in the past, \(\mathcal{Y}\) (yesterday) and
-\(\mathcal{S}\) (since) respectively. The first three formulas show the encoding
-of logical operators \(\neg, \land\), and \(\lor\). The rest of the table shows
-the encoding of the temporal operators. Extra care is taken in the definitions
-of \(\mathcal{S}\) and \(\mathcal{U}\) to ensure that the properties of the
-lasso are taken into account.
+component subformulas based on the rules in table \ref{table:zot-constraints}.
+The first three formulas show the encoding of logical operators \(\neg, \land\),
+and \(\lor\). The rest of the table shows the encoding of the temporal
+operators. Extra care is taken in the definition of \(\mathcal{U}\) to ensure
+that the properties of the lasso are taken into account.
 
 \begin{table}
   \centering
@@ -316,9 +323,9 @@ lasso are taken into account.
     \(\varphi_{1} \land \varphi_{2}\)& \(\overleftarrow{(\varphi_{1} \land \varphi_{2})} = \overleftarrow{(\varphi_{1})} \BitAnd \overleftarrow{(\varphi_{2})} \) \\
     \(\varphi_{1} \lor \varphi_{2}\)& \(\overleftarrow{(\varphi_{1} \lor \varphi_{2})} = \overleftarrow{(\varphi_{1})} \BitOr \overleftarrow{(\varphi_{2})} \) \\
     \midrule
-    \(\mathcal{Y}\varphi\)         & \(\overleftarrow{(\mathcal{Y}\varphi)} =\ \ll \overleftarrow{(\varphi)}\) \\
-    \(\varphi_{1}\mathcal{S}\varphi_{2}\) & \( \overleftarrow{(\varphi_{1}\mathcal{S}\varphi_{2})}^{[k{+}1:0]} = \biggl(\overleftarrow{(\varphi_{2})}^{[k{+}1:1]} \BitOr \bigl( \overleftarrow{(\varphi_{1})}^{[k{+}1:1]} \BitAnd \) \\
-             & \(\overleftarrow{(\varphi_{1}\mathcal{S}\varphi_{2})}^{[k:0]}\bigr) \biggr) :: \overleftarrow{(\varphi_{2})}^{[0]} \) \\
+   % \(\mathcal{Y}\varphi\)         & \(\overleftarrow{(\mathcal{Y}\varphi)} =\ \ll \overleftarrow{(\varphi)}\) \\
+   % \(\varphi_{1}\mathcal{S}\varphi_{2}\) & \( \overleftarrow{(\varphi_{1}\mathcal{S}\varphi_{2})}^{[k{+}1:0]} = \biggl(\overleftarrow{(\varphi_{2})}^{[k{+}1:1]} \BitOr \bigl( \overleftarrow{(\varphi_{1})}^{[k{+}1:1]} \BitAnd \) \\
+   %          & \(\overleftarrow{(\varphi_{1}\mathcal{S}\varphi_{2})}^{[k:0]}\bigr) \biggr) :: \overleftarrow{(\varphi_{2})}^{[0]} \) \\
     \(\mathcal{X} \varphi\)        & \(\overleftarrow{(\mathcal{X}\varphi)}^{[k:0]} = \overleftarrow{(\varphi)}^{[k{+}1:1]} \) \\
     \(\varphi_{1} \mathcal{U} \varphi_{2}\) & \(\overleftarrow{(\varphi_{1} \mathcal{U} \varphi_{2})}^{[k:0]} = \overleftarrow{(\varphi_{2})}^{[k:0]} \BitOr \bigl( \overleftarrow{(\varphi_{1})}^{[k:0]} \BitAnd \overleftarrow{(\varphi_{1} \mathcal{U} \varphi_{2})}^{[k{+}1:1]} \bigr) \) \\
              & \(\land \biggl( \Bigl( \big( \overleftarrow{(\varphi_{1})}^{[k{+}1]} \BitOr \overleftarrow{(\varphi_{2})}^{[k{+}1]} \BitOr \BitNeg\overleftarrow{(\varphi_{1} \mathcal{U} \varphi_{2})}^{[k{+}1]} \big) \BitAnd\) \\
@@ -348,11 +355,13 @@ represent the \emph{null transition} (when a TA does not transition between time
 positions) not as the separate entity \(\sharp\), but rather as a set of
 transitions that obey the same rules as the discrete transitions. We explicitly
 add a null transition for each state \(q \in Q\) to the set of transitions.
-\[\underset{q \in Q}{\forall}\ t_{null_q} := {<}q, q, \tau, \varnothing, \varnothing, \varnothing, \varnothing {>}\]
+\[\underset{i \in [1,N]}{\forall}\ \underset{q \in Q_{i}}{\forall}\ t_{null_q} := {<}q, q, \tau, \varnothing, \varnothing, \varnothing, \varnothing {>}\]
 These null transitions have the same source and destination state, and no
 constraints or assignments. We can now refer to the set of all transitions as
 \(\mathcal{T}\), defined as
-\(\mathcal{T} = T \cup \{\underset{q \in Q}{\cup}\ t_{null_q}\}\).
+\(\mathcal{T_{i}} = T_{i} \cup \{\underset{q \in Q_{i}}{\cup}\ t_{null_{q}}\}\)
+for each TA \(\mathcal{A}_{i}\). As before \(\mathcal{T}\) is the union of the
+\(\mathcal{T}_{i}\) sets.
 
 
 Using BitVector logic, we have the ability to group logically connected
@@ -367,9 +376,11 @@ dozens of discrete transitions long. This motivates us to use the BitVectors to
 represent a piece of information changing over time, i.e.\ representing its value
 at different time positions in the trace.
 
+\subsection{Transitions}\label{encoding-transitions}
+
 When encoding the constraints of the system, it is convenient to write that a
 constraint will hold over every discrete time position in the trace. As an
-example, consider a transition with a variable assignment \(v_i = 5\). When
+example, consider a transition with a variable assignment \(n = 5, n \in Int\). When
 formalizing the constraints, it would be simpler to have a formula of the type
 \(\overleftarrow{transition}_{[k+2]} \Rightarrow
 \overleftarrow{assignment}_{[k+2]}\) that we can assert over every time position
@@ -380,6 +391,19 @@ transition BitVector implies a given constraint at every time position. At a
 given time position \(i\), if the corresponding bit in the transition BitVector
 is set to 1, then the same bit in the variable BitVector would be required to be
 set to 1 as well. Otherwise the SMT solver would dismiss the trace as invalid.
+
+\begin{table}
+\centering
+\begin{tabular}{ll}
+ Transition Bit & BitVector\\
+\midrule
+0 & \(\overleftarrow{tb_{i,0}}_{[k+2]}\)\\
+1 & \(\overleftarrow{tb_{i,1}}_{[k+2]}\)\\
+\rotatebox{90}{\ldots} & \rotatebox{90}{\ldots}\\
+\((\lceil \log_2 \mathcal{T}_i \rceil -1)\) & \(\overleftarrow{tb_{i,(\lceil \log_2 \mathcal{T}_i \rceil -1)}}_{[k+2]}\)\\
+\end{tabular}
+\caption{Construction of the Transition BitVectors for \(\mathcal{A}_{i} \in \mathcal{A}\)}
+\end{table}
 
 This encoding, while convenient, is not very efficient. Using one BitVector per
 each transition yields a space complexity of \(O(|\mathcal{T}|k)\). Since only
@@ -397,65 +421,32 @@ For a model with a time bound of k, and a timed automaton with n distinct
 transitions, we represent the active transition of the automaton at different
 time positions as follows:
 
-\begin{table}
-\centering
-\begin{tabular}{ll}
- & k+1, \(\ldots\), 1, 0\\
-\midrule
-0 & \(\overleftarrow{sb_{i,0}}_{[k+2]}\)\\
-1 & \(\overleftarrow{sb_{i,1}}_{[k+2]}\)\\
-\ldots{} & \ldots{}\\
-\(\lceil \log_2 n_i \rceil -1\) & \(\overleftarrow{sb_{i, \lceil \log_2 n_i \rceil -1}}_{[k+2]}\)\\
-\end{tabular}
-\end{table}
-
 After defining the BitVectors to store the bits of the active transition, we
-define aliases for the \(|\mathcal{T}|\) transitions as shown in table \ref{t-aliases}.
+define aliases for the \(|\mathcal{T}_{i}|\) transitions as shown in table \ref{t-aliases}.
 Transition 0 is simply defined as the bit-wise `and' of the negations of each of
-the \(sb\) BitVectors. Transition 1 differs in that the last BitVector is not
+the \(tb\) BitVectors. Transition 1 differs in that the last BitVector is not
 negated. This corresponds to the BitVector representation of the number 1, which
 is \(\overleftarrow{00\ldots 001}\). When viewed in the table, the pattern becomes more clear. Each
-transition is encoded as a unique combination of the \(sb\) vectors. Because
-the exact value of \(|\mathcal{T}|\) is variable, for the last transition in the table we
+transition is encoded as a unique combination of the \(tb\) vectors. Because
+the exact value of \(|\mathcal{T}_{i}|\) is variable, for the last transition in the table we
 use the symbol \(\sim\) to signal that whether or not the BitVector is negated
-depends on the exact value of \(|\mathcal{T}|\).
+depends on the exact value of \(|\mathcal{T}_{i}|\).
 
 \begin{table}
 \centering
-\caption{Construction of the Transition Aliases}
 \begin{tabular}{c | c}\label{t-aliases}
 Transition & Alias \\
 \midrule
-\(T_{i,0}\) & \(\neg\overleftarrow{sb_{i,\lceil \log_2 n_i \rceil -1}} \BitAnd \neg\overleftarrow{sb_{i,\lceil \log_2 n_i \rceil -2}} \BitAnd \ldots \BitAnd \neg\overleftarrow{sb_{i,1}} \BitAnd \neg\overleftarrow{sb_{i,0}} \) \\
-\(T_{i,1}\) & \(\neg\overleftarrow{sb_{i,\lceil \log_2 n_i \rceil -1}} \BitAnd \neg\overleftarrow{sb_{i,\lceil \log_2 n_i \rceil -2}} \BitAnd \ldots \BitAnd \neg\overleftarrow{sb_{i,1}} \BitAnd \overleftarrow{sb_{i,0}} \) \\
-\(T_{i,2}\) & \(\neg\overleftarrow{sb_{i,\lceil \log_2 n_i \rceil -1}} \BitAnd \neg\overleftarrow{sb_{i,\lceil \log_2 n_i \rceil -2}} \BitAnd \ldots \BitAnd \overleftarrow{sb_{i,1}} \BitAnd \neg\overleftarrow{sb_{i,0}} \) \\
+\(\mathcal{T}_{i}[0]\) & \(\neg\overleftarrow{tb_{i,\lceil \log_2 \mathcal{T}_i \rceil -1}} \BitAnd \neg\overleftarrow{tb_{i,\lceil \log_2 \mathcal{T}_i \rceil -2}} \BitAnd \ldots \BitAnd \neg\overleftarrow{tb_{i,1}} \BitAnd \neg\overleftarrow{tb_{i,0}} \) \\
+\(\mathcal{T}_{i}[1]\) & \(\neg\overleftarrow{tb_{i,\lceil \log_2 \mathcal{T}_i \rceil -1}} \BitAnd \neg\overleftarrow{tb_{i,\lceil \log_2 \mathcal{T}_i \rceil -2}} \BitAnd \ldots \BitAnd \neg\overleftarrow{tb_{i,1}} \BitAnd \overleftarrow{tb_{i,0}} \) \\
+\(\mathcal{T}_{i}[2]\) & \(\neg\overleftarrow{tb_{i,\lceil \log_2 \mathcal{T}_i \rceil -1}} \BitAnd \neg\overleftarrow{tb_{i,\lceil \log_2 \mathcal{T}_i \rceil -2}} \BitAnd \ldots \BitAnd \overleftarrow{tb_{i,1}} \BitAnd \neg\overleftarrow{tb_{i,0}} \) \\
 \rotatebox{90}{\(\ldots\)} & \rotatebox{90}{\(\ldots\)} \\
-\(T_{i,|T|}\) & \(\overleftarrow{sb_{i,\lceil \log_2 n_i \rceil -1}} \BitAnd (\sim\overleftarrow{sb_{i,\lceil \log_2 n_i \rceil -2}}) \BitAnd \ldots \BitAnd (\sim\overleftarrow{sb_{i,1}}) \BitAnd (\sim\overleftarrow{sb_{i,0}}) \) \\
+\(\mathcal{T}_{i}[|\mathcal{T}_{i}|]\) & \(\overleftarrow{tb_{i,\lceil \log_2 \mathcal{T}_i \rceil -1}} \BitAnd (\sim\overleftarrow{tb_{i,\lceil \log_2 \mathcal{T}_i \rceil -2}}) \BitAnd \ldots \BitAnd (\sim\overleftarrow{tb_{i,1}}) \BitAnd (\sim\overleftarrow{tb_{i,0}}) \) \\
 
 \end{tabular}
+\caption{Construction of the Transition Aliases}
 \end{table}
 
-
-\subsection{Transitions}\label{encoding-transitions}
-
-In the traditional description of Timed Automata, a TA that does not perform a
-discrete transition at a given time position is said to perform a \(null\
-transition\), i.e.\ staying in the same state without firing any transition in
-the set \(T\). In our encoding it is convenient to explicitly add a null
-transition for each state \(q \in Q\) to the set of transitions. \(\forall_{q
-\in Q} trans_{null_q} := {<}q, q, \tau, \varnothing, \varnothing, \varnothing,
-\varnothing {>}\), and \(\mathcal{T} = T \cup \{\cup_{q \in Q}
-trans_{null_q}\}\) \(trans_{null} := \BitOr_{q \in Q} trans_{null_q}\)
-
-We define \(O: \mathcal{T} \rightarrow \mathbb{N}\) be a bijective
-function mapping each transition to a natural number less than
-\(|\mathcal{T}|\). We define BitVectors \(\{\overleftarrow{tb_1},
-\overleftarrow{tb_2}, \ldots, \overleftarrow{tb_{\lceil
-\log_2 |\mathcal{T}|\rceil}}\}\) of size \(k+2\). The BitVector for each
-individual transition is defined as \(\overleftarrow{trans_t}_{[k+2]} :=
-\BitAnd_{i=1}^{\lceil\log_2 |\mathcal{T}|\rceil} N_t(tb_i)\), where \(N_t(tb_i)\)
-returns \(tb_i\) if the \(i\)th bit in the base two representation of \(O(t)\)
-is 1, and returns \(\neg tb_i\) otherwise.
 
 For clarity, let us consider an example TA with
 \(\lceil\log_2 |\mathcal{T}|\rceil = 5\) and a transition \(t \in \mathcal{T}\)
@@ -482,20 +473,21 @@ the transitions whose source is that state.
 Bounded integer variables are treated slightly differently, because unlike
 states and transitions, the possible values of a bounded integer variable are
 not unrelated objects in a set, but integers that must respect the operations of
-addition and subtraction. For each variable \(v_i \in Int\) we still construct a
-bit representation \(\overleftarrow{var_{v}b_{i,j}}_{[k+2]}\), where each BitVector
+addition and subtraction. For each variable \(n \in Int\) we still construct a
+bit representation \(\overleftarrow{vb_{n,j}}_{[k+2]}\), where each BitVector
 has length \(k+2\). However the difference is that the values are encoded in 2s
 complement notation, and the number of BitVectors is chosen so that the vectors
 are capable of representing the entire range of values for the given bounded
-integer variable. We will define \(\lambda(v_i)\) as the number of bits needed.
+integer variable. We will define \(\lambda(n)\) as the number of bits needed for
+each variable \(n\).
 
 However sometimes it is more convenient to refer to the complete value of a
 variable at a particular time position, rather than a particular bit of the
 variable over every time position. We make use of the `extract' and
 `concat' operators to define a second set of BitVectors that are defined over
-the first set. \(\overleftarrow{var_{v,j}}_{[\lambda(v_i)]}\), \(0 \leq j \leq
-k+1\) is a vector of \(\lambda(v_i)\) bits that represents the value of variable
-\(v_i\) at time position \(j\).
+the first set. \(\overleftarrow{var_{n}(l)}_{[\lambda(n)]}\), \(0 \leq j \leq
+k+1\) is a vector of \(\lambda(n)\) bits that represents the value of variable
+\(n\) at time position \(j\).
 
 
 \subsection{Clocks}\label{encoding-clocks}
@@ -504,12 +496,80 @@ Each clock \(x \in \mathcal{X}\) is defined as a function \(x\) that takes
 an integer argument and returns a real number, where the argument represents the
 time position and the return value is the value of the clock at that position.
 
+\subsection{Complete Encoding}\label{complete-encoding}
+
+\begin{table}
+  \centering
+  \begin{tabular}{l c l}
+    \toprule
+    \multicolumn{3}{c}{Terms} \\
+    \midrule
+    Transitions &
+                  \(\underset{i \in [1,N]}{\forall}\ \underset{j \in [0,|\mathcal{T}_{i}|{-}1]}{\forall} \)&
+                                                                                                         \( \overleftarrow{tb_{i,j}}_{[k{+}2]} \)
+    \\
+    Variables &
+                \(\underset{n \in Int}{\forall}\ \underset{j \in [0,\lambda(n){-}1]}{\forall} \)&\( \overleftarrow{vb_{n,j}}_{[k{+}2]} \)
+    \\
+    Clocks &
+             \( \underset{x \in X}{\forall}\)&\( x : [0,k{+1}] \rightarrow \mathbb{R}_{\geq 0} \)
+    \\
+    \(\delta\) & & \(\delta : [0,k{+}1] \rightarrow \mathbb{R}_{>0}\) \\
+    Loop & &
+             \(\overleftarrow{0}_{[k{+}2]} < \overleftarrow{loop}_{[k{+}2]} \leq \overleftarrow{k}_{[k{+}2]}\) \\
+    \midrule
+    \multicolumn{3}{c}{Aliases} \\
+    \midrule
+    Transitions &
+                  \(\underset{i \in [1,N]}{\forall}\ \underset{t \in [1,\mathcal{T}_{i}]}{\forall}\)&
+                                                                                                      \( \overleftarrow{trans_{t}} = \underset{j \in [0,\lceil |\log_{2} \mathcal{T}_{i}|\rceil{-}1]}{\BitAnd} \BitNeg^{(t \backslash 2^{j}) mod\ 2}\ (\BitNeg(\overleftarrow{tb_{i,j}}))\)
+    \\
+    States &
+             \(\underset{i \in [1,N]}{\forall}\ \underset{q \in Q_{i}}{\forall}\)&
+                                                                                  \(\overleftarrow{state_{q}} = \underset{t \in \mathcal{T}_{i}}{\BitOr} \overleftarrow{trans_{t}} \)
+    \\
+    Variables &
+                \(\underset{n \in Int}{\forall}\ \underset{l \in [0,k{+}1]}{\forall}\)&
+                                                                                        \(\overleftarrow{var_{n}(l)} = \underset{j \in [\lambda(n),0]}{:} \overleftarrow{vb_{n,j}}^{[l]} \)
+    \\
+    \bottomrule
+  \end{tabular}
+  \caption{Terms and Aliases used in BV encoding of TA}
+  \label{table:terms}
+\end{table}
+
+Now that each piece of the timed automaton has been discussed, we can present
+all of the terms used in the encoding of the TA network. A valid trace of the
+network consists of assigning values to the following terms in table\
+\ref{table:terms}. As we can see, the terms that our SMT solver will need
+to assign values to are the compacted transition and variable BitVectors, as
+well as the real-valued clock functions. In addition we define two special
+terms, which will be used to help define our constraints. The first, \(\delta\),
+represents the amount of time that passes between two adjacent time positions,
+and must be a real number greater than 0. The second, the term
+\(\overleftarrow{loop}\), has a value equal to the index of the first time
+position in the loop portion of the trace. From these we can represent any valid
+lasso-shaped trace of the network. In addition, for ease of comprehension we
+have aliases to more easily refer to the transitions and states individually,
+and to refer to the value of a variable at a particular time position.
+
+
 \section{Constraints}\label{constraints}
 \iffalse
 TODO:\@ mention that the operators \(\lor, \land, \BitOr , \BitAnd, \Rightarrow\) represent
 bvor, bvand, etc. (in background) -  maybe explain how you are exploiting
 bvlogic to write constraints - quick comment
 \fi
+
+Of course, in addition to being able to represent all valid lasso-shaped traces,
+the terms defined can represent many illegal traces as well. Timed Automata in
+our network cannot simply take any transition as they please, they must obey
+certain restrictions. These restrictions take the form of clock guards on a
+transition, a state invariant that prevents a TA from staying in a state
+indefinitely, clock progression contraints, as well as many others. To ensure
+that our encoding only allows for valid traces, we will formalize these
+constraints in BitVector logic for our SMT solver to use when performing the
+Bounded Model Checking.
 
 \subsection{Initialization \& Progression}\label{constraints-init}
 
@@ -518,25 +578,26 @@ bvlogic to write constraints - quick comment
 \begin{tabular}{c | c | c}
 \multicolumn{3}{c}{Initialization and Progression Constraints} \\
 \midrule
-\(\phi_1 := \underset{i \in [1,N]}{\BitAnd} \overleftarrow{1}_{[1]} = \overleftarrow{state_{init(i)}}^{[0]}\)
-& \(\phi_2 := \underset{v \in Int}{\BitAnd} \overleftarrow{init(v)} = \overleftarrow{v[0]}\)
+\(\phi_1 := \underset{i \in [1,N]}{\BitAnd} \overleftarrow{1}_{[1]} = \overleftarrow{state_{q_{i}^{0}}}^{[0]}\)
+& \(\phi_2 := \underset{n \in Int}{\BitAnd} \overleftarrow{v_{var}^{0}(n)} = \overleftarrow{var_{n}(0)}\)
 & \(\phi_3 := \underset{x \in X}{\bigwedge} x(0) = 0\) \\
 \midrule
 \(\phi_4 := \underset{i \in [0,k+1]}{\bigwedge} \delta(i) > 0\) &
 \multicolumn{2}{c}{
-\(\phi_5 := \overleftarrow{0}_{[k+2]} = \underset{i \in [1,N]}{\BitAnd}  \overleftarrow{trans_{null_i}} \)} \\
+\(\phi_5 := \overleftarrow{0}_{[k+2]} = \underset{i \in [1,N]}{\BitAnd}\ \underset{q \in Q_{i}}{\BitOr} \overleftarrow{trans_{null_q}} \)}
+  \\
 \midrule
 \multicolumn{3}{c}{
-\(\phi_6 := \underset{t \in \mathcal{T}}{\BitAnd} \overleftarrow{trans_t}^{[k:0]} \Rightarrow
-\overleftarrow{state_{t_+}}^{[k+1:1]}\)} \\
+\(\phi_6 := \underset{t \in \mathcal{T}}{\BitAnd} (\overleftarrow{trans_t}^{[k:0]} \Rightarrow
+\overleftarrow{state_{t_+}}^{[k+1:1]})\)} \\
 \midrule
 \multicolumn{3}{c}{
 \(\phi_7 := \underset{x \in X}{\bigwedge}\ \underset{j \in [0,k]}{\bigwedge}\ \Big( \underset{t \in \mathcal{R}(x)}{\BitAnd} {(\BitNeg\overleftarrow{t})}^{[j]} \Big)
 \Rightarrow x(j+1) = x(j) + \delta(j)\)} \\
 \midrule
 \multicolumn{3}{c}{
-\(\phi_8 := \underset{v \in Int}{\BitAnd}  \underset{t \in assign(v)}{\BitAnd} (\BitNeg\ \overleftarrow{trans_{t}}^{[k:0]}) \Rightarrow \underset{j \in [1,\lambda(v)]}{\BitAnd}
-(\overleftarrow{var_{v}b_j}^{[k:0]} = \overleftarrow{var_{v}b_j}^{[k+1:1]}) \)} \\
+\(\phi_8 := \underset{n \in Int}{\BitAnd}  \underset{t \in assign(n)}{\BitAnd} (\BitNeg\ \overleftarrow{trans_{t}}^{[k:0]}) \Rightarrow \underset{j \in [1,\lambda(n)]}{\BitAnd}
+(\overleftarrow{v_{n}b_j}^{[k:0]} = \overleftarrow{v_{n}b_j}^{[k+1:1]}) \)} \\
 \midrule
   \multicolumn{3}{c}{\( \phi_{Init} := ( \phi_{1} \BitAnd \phi_{2} \BitAnd \phi_{5} \BitAnd \phi_{6} \BitAnd \phi_{8} =\BitNeg\overleftarrow{0}_{[k{+}2]} ) \land \phi_{3} \land \phi_{4} \land \phi_{7}\)} \\
 \bottomrule
@@ -545,11 +606,11 @@ bvlogic to write constraints - quick comment
 
 The initialization constraints are similar for states, clocks, and bounded
 variables. For states, we assert that the initial state holds in the first time
-position by comparing the vector for the initial state \(state_{init(i)}\) to
+position by comparing the vector for the initial state \(state_{q_i^{0}}\) to
 the constant vector \(\overleftarrow{1}_{[1]}\) in formula \(\phi_1\). This
 requires the first bit of the state vector to be set to 1, signifying that the
 state is active in time position 0. For variables, we assert that the provided
-initial starting value, \(init(v)\) is equal to the value of the variable at
+initial starting value, \(var_{n}^{0}\) is equal to the value of the variable at
 time position 0. For clocks, we assert that the clock function at the initial
 time position is equal to 0 in formula \(\phi_3\).
 
@@ -558,20 +619,21 @@ which at least one timed automaton makes a discrete (non-null) transition. In
 between these positions, all timed automata remain stationary, and only the
 clocks progress. To capture this progression, we introduce a new clock,
 \(\delta\). Formula \(\phi_4\) captures that \(\delta\) is defined as a function
-over integers in the range \([0,k+1]\) that returns positive integers. The value
-of \(\delta(i)\) at position \(i\) refers to the amount of time between position
-\(i\) and position \(i+1\). To ensure that each time position contains a
-discrete transition, we assert with formula \(\phi_5\) that at every time
+over integers in the range \([0,k+1]\) that returns positive real numbers. The
+value of \(\delta(i)\) at position \(i\) refers to the amount of time between
+position \(i\) and position \(i+1\). To ensure that each time position contains
+a discrete transition, we assert with formula \(\phi_5\) that at every time
 position, at least one timed automaton \(i\) has
-\(\overleftarrow{trans_{null_i}}\) set to 0, meaning that it is not taking a
-null transition. This guarantees that at least one timed automaton has an active
-non-null transition at each time position. Another aspect of progression is
-ensuring that the active state of a timed automaton correctly reflects the
-transitions being taken. To that effect, formula \(\phi_6\) asserts that when a
-transition is taken at time position \(i\), the destination state is active at
-position \(i{+}1\). Because the state BitVectors are just aliases defined over
-the transition BitVectors, we do not need to explicitly constrain the TA to be
-in state \(t_{-}\) at time position \(i\), since this is true by definition.
+\(\underset{q \in Q_{i}}{\BitOr}\overleftarrow{trans_{null_q}}\) set to 0,
+meaning that it is not taking a null transition. This guarantees that at least
+one timed automaton has an active non-null transition at each time position.
+Another aspect of progression is ensuring that the active state of a timed
+automaton correctly reflects the transitions being taken. To that effect,
+formula \(\phi_6\) asserts that when a transition is taken at time position
+\(i\), the destination state is active at position \(i{+}1\). Because the state
+BitVectors are just aliases defined over the transition BitVectors, we do not
+need to explicitly constrain the TA to be in state \(t_{-}\) at time position
+\(i\), since this is true by definition.
 
 We must next discuss the progression of the clocks and integer variables. In
 formula \(\phi_4\) we discussed the special clock \(\delta\), and how it
@@ -582,9 +644,9 @@ a clock is either reset by a transition, or its value increments by
 \(x\), which is defined as the set of all transitions \(t\) that reset the value
 of clock \(x\). When no transition in \(\mathcal{R}_x\) is active, the clock
 must progress according to the value of \(\delta\). Similarly for variables, we
-define the set \(assign(v)\) for every variable \(v\) containing all transitions
+define the set \(assign(n)\) for every variable \(n\) containing all transitions
 that assign a value to the variable. When none of these transitions are active,
-formula \(\phi_8\) ensures that the value of \(v\) remains unchanged.
+formula \(\phi_8\) ensures that the value of \(n\) remains unchanged.
 
 \subsection{Transitions}\label{consstraints-trans}
 
@@ -599,7 +661,7 @@ formula \(\phi_8\) ensures that the value of \(v\) remains unchanged.
 \midrule
 \(\phi_{11} := \)&\(\underset{t \in T}{\bigwedge}\ \underset{x \in t_{a_c}}{\bigwedge}\ \underset{l \in [0,k]}{\bigwedge} \overleftarrow{trans_t}^{[l]} \rightarrow x(l{+}1) = 0\) \\
 \midrule
-\(\phi_{12} := \)&\(\underset{t \in T}{\BitAnd}\ \underset{v,\exp \in t_{a_v}}{\BitAnd}\ \underset{l \in [0,k]}{\BitAnd} \overleftarrow{trans_t}^{[l]} \Rightarrow \overleftarrow{var_{v}(l{+}1)} = \overleftarrow{\zeta(l,\exp)} \) \\
+\(\phi_{12} := \)&\(\underset{t \in T}{\bigwedge}\ \underset{n,\exp \in t_{a_v}}{\bigwedge}\ \underset{l \in [0,k]}{\bigwedge} \overleftarrow{trans_t}^{[l]} \rightarrow \big(\overleftarrow{var_{n}(l{+}1)} = \overleftarrow{\zeta(l,n,\exp)}\big) \) \\
 \midrule
   \(\phi_{13} := \)&\(\underset{t \in T}{\bigwedge}\ \underset{l \in [0,k]}{\bigwedge} \overleftarrow{trans_t}^{[l]} \rightarrow \) \\
   &\( \biggl(\sigma(l, Inv(t_-)) \land \sigma_{w}(l{+}1, Inv(t_+))\biggr) \)\( \lor \biggl(\sigma_w(l, Int(t_-)) \land \sigma(l{+}1, Inv(t_+))\biggr)\) \\
@@ -610,11 +672,11 @@ formula \(\phi_8\) ensures that the value of \(v\) remains unchanged.
 \midrule
 \( \sigma_w(l,\gamma_{c}) :=  \)&\(x(l) \sim_{w} c\ |\ \neg \sigma_{w}(l,\gamma_{c}')\ |\ \sigma_{w}(l,\gamma_{c}') \land \sigma_{w}(l,\gamma_{c}'') \) \\
 \midrule
-\( \mu(l,\gamma_{v}) :=  \)&\(v(l) \sim c\ |\ v(l) \sim v'(l)\ |\ \neg \mu(l,\gamma_{v}')\ |\ \mu(l,\gamma_{v}') \land \mu(l,\gamma_{v}'') \) \\
+\( \mu(l,\gamma_{v}) :=  \)&\(\overleftarrow{var_{v}(l)}_{[\lambda(v)]} \sim \overleftarrow{c}_{[\lambda(v)]}\ |\ \overleftarrow{v(l)}_{[\lambda(v)]} \sim \overleftarrow{v'(l)}_{[\lambda(v)]}\ |\ \neg \mu(l,\gamma_{v}')\ |\ \mu(l,\gamma_{v}') \land \mu(l,\gamma_{v}'') \) \\
 \midrule
-\( \zeta(l,\exp) :=  \)&\( \overleftarrow{v(l)}_{[\lambda(v)]} \sim \overleftarrow{c}_{[\lambda(v)]}\ |\ \overleftarrow{v(l)} \sim \overleftarrow{v'(l)}\ |\ \neg \zeta(l,\exp')\ |\ \zeta(l,\exp') \land \zeta(l,\exp'') \) \\
+\( \zeta(l,n,\exp) :=  \)&\( \overleftarrow{var_{j}(l)}_{[\lambda(n)]}\ |\ \overleftarrow{c}_{[\lambda(n)]}\ |\  \zeta(l,n,\exp') + \zeta(l,n,\exp'')\ |\  \zeta(l,n,\exp') - \zeta(l,n,\exp'') \) \\
 \midrule
-\(\phi_{trans} :=\) & \(\phi_{9} \land \phi_{10} \land \phi_{11} \land (\phi_{12} =\ \BitNeg \overleftarrow{0}) \land \phi_{13}\) \\
+\(\phi_{trans} :=\) & \(\phi_{9} \land \phi_{10} \land \phi_{11} \land \phi_{12} \land \phi_{13}\) \\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -629,28 +691,28 @@ the destination of one transition is the source of the next.
 
 We will first consider the transition guards. Each transition can have multiple
 guards, which consist of two types, clock guards and variable guards. Clock
-guards have the form \(c\ \sim\ val\), where \(c \in X\), \(val \in
-\mathbb{Z}\) and \(\sim \in \{<,>,\leq,\geq\}\). Formula \(\phi_9\) asserts that
-for every clock guard, its transition being active at time instance \(l\)
-implies that at the instance of transition, the relationship \(\sim\) holds
-between the clock value and the value. Recall that if a transition is active at
-time instance \(l\), the transition occurs in the instant between time instance
-\(l\) and time instance \(l+1\). Therefore, at the instance of the transition,
-the clock does not have the value \(c(l)\), but rather \(c(l) + \delta(l)\),
-delta being the special clock that defines the amount of time spent in each time
-instance. Note that we cannot simply use \(c(l+1)\) as the value of the clock,
-because it is possible that during the transition between time instance \(l\)
-and \(l+1\), the value of the clock may be reset, which would set \(c(l+1)=0\).
-Our guard only sees the pre-transition value of the clock, and thus we must
-manually add \(\delta(l)\) to the value.
-\(\phi_{10}\) captures the same semantics for variable guards, asserting that an
-active transition with a guard implies that the guard is true at that time
-instance. Because variables, unlike clocks, do not progress with time, it is
-sufficient to simply use the value \(var(l)\) to determine if the guard is satisfied.
+guards have the form \(x\ \sim\ c\), where \(x \in X\), \(c \in \mathbb{Z}\) and
+\(\sim \in \{<,>,\leq,\geq\}\). Formula \(\phi_9\) asserts that for every clock
+guard, its transition being active at time position \(l\) implies that at the
+instance of transition, the relationship \(\sim\) holds between the clock value
+and the value. Recall that if a transition is active at time position \(l\), the
+transition occurs in the instant between time position \(l\) and time position
+\(l+1\). Therefore, at the instance of the transition, the clock does not have
+the value \(x(l)\), but rather \(x(l) + \delta(l)\), delta being the special
+clock that defines the amount of time spent in each time position. Note that we
+cannot simply use \(x(l+1)\) as the value of the clock, because it is possible
+that during the transition between time position \(l\) and \(l+1\), the value of
+the clock may be reset, which would set \(x(l+1)=0\). Our guard only sees the
+pre-transition value of the clock, and thus we must manually add \(\delta(l)\)
+to the value. \(\phi_{10}\) captures the same semantics for variable guards,
+asserting that an active transition with a guard implies that the guard is true
+at that time position. Because variables, unlike clocks, do not progress with
+time, it is sufficient to simply use the value \(var_{v}(l)\) to determine if
+the guard is satisfied.
 
 Clock assignments are more straightforward then the clock guards. It is enough
-to require that if a transition is taken at time instance \(l\), then in the
-following time instance the clock is reset to the desired value. Variable
+to require that if a transition is taken at time position \(l\), then in the
+following time position the clock is reset to the desired value. Variable
 assignments however, are more complex. Unlike clock assignments, which reset
 clocks to a constant number in \(\mathbb{Z}^+\), variable assignments can access
 both constant values and the values of other variables, and they may combine
@@ -658,13 +720,13 @@ them using the operators \(\{+,-\}\). To implement this in our bvlogic, we first
 require that if a variable \(v'\) appears in the assignment expression of
 variable \(v\), then the possible values of \(v'\) must be a subset of the
 possible values of \(v\). Recall that \(\overleftarrow{var_v}(l)\) is a bit
-vector of \(\lambda(v)\) bits that contains the value of \(v\) at time instance
-\(l\) in two's-complement form. By constraining \(v' \subseteq v\), we prevent
+vector of \(\lambda(v)\) bits that contains the value of \(v\) at time position
+\(l\) in two's-complement form. By constraining \(\lambda(v') \leq \lambda(v)\), we prevent
 \(v'\) from having a BitVector of greater length than that of \(v\). We can then
 cast all constants and variables to BitVectors of length \(\lambda(v)\),
-sign-extending shorter variables if necessary. This allows us to use the
+sign-extending shorter values if necessary. This allows us to use the
 standard BitVector addition and subtraction operators to compute the final
-value, which is assigned to \(v\) at time instance \(l{+}1\).
+value, which is assigned to \(v\) at time position \(l{+}1\).
 
 The last component of a transition to discuss is the state invariant. Although
 invariants are state-specific, not transition-specific, since states are defined
@@ -675,7 +737,7 @@ in the original TACK paper, weak satisfaction is a relation where the invariants
 are relaxed so that the relations \(<,>\) are also satisfied with equality. This
 was done to model the fact that at the instant of transition, the transition is
 located in exactly one of the two states, source or destination. This choice can
-be different for each timed automaton and each time instance. If the timed
+be different for each timed automaton and each time position. If the timed
 automaton is not in a state in the instance of transition, then a strict
 inequality can be satisfied with equality at the instance of transition, since
 the automaton is not actually in that state at that instant.
@@ -713,7 +775,7 @@ over the channel at a time, and only one can receive at a time. Furthermore each
 send must be matched by a receive and vice versa. Formula \(\phi_{14}\) captures
 these semantics for a transition with action \(\alpha!\) for some channel
 \(\alpha\). Such a transition implies that no other transition with the action
-\(\alpha!\) can be active in the same time instance, and furthermore one of the
+\(\alpha!\) can be active in the same time position, and furthermore one of the
 transitions with the action \(\alpha?\) must be active. Formula \(\phi_{15}\)
 captures the same constraints from the point of view of the receiving
 transition. A transition with action \(\alpha?\) implies both that no other
@@ -743,9 +805,9 @@ the ``compulsive'' nature of the broadcast-send transition.
 \begin{tabular}{c}
 Loop Constraints \\
 \midrule
-\(\phi_{19} := \underset{i \in [1,|\mathcal{A}|]}{\BitAnd}\ \underset{j \in [1,\lceil\log_2 |\mathcal{T}_i|\rceil]}{\BitAnd} \overleftarrow{tb_j}^{[k+1]} = \overleftarrow{tb_j}^{[loop]}\) \\
+\(\phi_{19} := \underset{i \in [1,N]}{\bigwedge}\ \underset{j \in [1,\lceil\log_2 |\mathcal{T}_i|\rceil]}{\bigwedge} \overleftarrow{tb_{i,j}}^{[k+1]} = \overleftarrow{tb_{i,j}}^{[loop]}\) \\
 \midrule
-\(\phi_{20} := \underset{v \in Int}{\BitAnd}\ \underset{j \in [1,\lambda(v)]}{\BitAnd} \overleftarrow{vb_j}^{[k+1]} = \overleftarrow{vb_j}^{[loop]}\) \\
+\(\phi_{20} := \underset{n \in Int}{\bigwedge}\ \underset{j \in [1,\lambda(n)]}{\bigwedge} \overleftarrow{vb_{n,j}}^{[k+1]} = \overleftarrow{vb_{n,j}}^{[loop]}\) \\
 \midrule
 \(\phi_{21} := \underset{x \in X}{\bigwedge} (\lfloor x(k{+}1) \rfloor\ = \lfloor x(loop) \rfloor) \lor (\lfloor x(k{+}1) \rfloor\ > \max(x) \land \lfloor x(loop) \rfloor > \max(x)) \) \\
 \midrule
@@ -755,7 +817,7 @@ Loop Constraints \\
 \midrule
 \(\phi_{24} := \underset{x \in X}{\bigwedge} x(k) > \max(x) \lor (( \underset{t: x \in t_{a_c}}{\BitOr}\overleftarrow{trans_t}) \BitAnd \overleftarrow{inloop} \neq \overleftarrow{0})\) \\
 \midrule
-\(\phi_{loop} := (\phi_{19} \BitAnd \phi_{20} =\ \BitNeg\overleftarrow{0}) \land \phi_{21} \land \phi_{22} \land \phi_{23} \land \phi_{24}\)
+\(\phi_{loop} := \phi_{19} \land \phi_{20} \land \phi_{21} \land \phi_{22} \land \phi_{23} \land \phi_{24}\)
 \end{tabular}
 \end{center}
 
@@ -763,34 +825,34 @@ As mentioned previously, we are only interested in lasso-shaped runs that end in
 a loop. To keep track of the initial position of the loop, we declare the
 variable \(loop\), and constrain it to have a value in the range \([1,k]\).
 
-Intuitively, the time position \(k+1\) represents the first time position in the
+Intuitively, the time position \(k{+}1\) represents the first time position in the
 next iteration of the loop. It is effectively a `copy' of the position
 \(loop\), however we add it as a distinct position so that we may capture
 the semantics of the transition between time position \(k\) and time position
 \(loop\). We therefore must introduce constraints to ensure that these two
 positions are in fact equivalent. This requires that the active state and
-transition of each timed automata at instance \(k+1\) be equal to that at
-instance \(loop\). Formula \(\phi_{19}\) captures this by requiring that
-for each Timed Automaton, each transition bit \(tb_i\) contains the same value
-at time instances \(k+1\) and \(loop\). Similarly, formula \(\phi_{20}\)
+transition of each timed automata at position \(k+1\) be equal to that at
+position \(loop\). Formula \(\phi_{19}\) captures this by requiring that
+for each Timed Automaton, each transition bit \(tb_{i,j}\) contains the same value
+at time positions \(k+1\) and \(loop\). Similarly, formula \(\phi_{20}\)
 enforces the same requirement for each bounded integer variable.
 
 It is tempting to encode the clock constraints in a similar manner, requiring
-that \(c(k+1) = c(loop)\) for each clock. However prior work by Kindermann[ref]
+that \(x(k+1) = x(loop)\) for each clock. However prior work by Kindermann[ref]
 has shown that this constraint is not complete, as it excludes valid
 lasso-shaped runs. To remedy this problem we use the requirements suggested by
-Kindermann. To begin, for each clock \(c\) we define the non-negative integer
-\(\max(c)\), which is equal to the maximum value either assigned to the clock in
+Kindermann. To begin, for each clock \(x\) we define the non-negative integer
+\(\max(x)\), which is equal to the maximum value either assigned to the clock in
 a clock assignment or compared against the clock in a clock guard. We also
-define \(frac(c(l))\), which is equal to the fractional part of \(c\) at time
-instance \(l\), or \(frac(c(l)) = c(l) - \lfloor c(l) \rfloor\). Formulas
+define \(frac(x(l))\), which is equal to the fractional part of \(x\) at time
+position \(l\), or \(frac(x(l)) = x(l) - \lfloor x(l) \rfloor\). Formulas
 \(\phi_{21}\), \(\phi_{22}\), and \(\phi_{23}\) encode the desired requirements.
-\(\phi_{21}\) encodes the first part of the relationship between \(c(loop)\) and
-\(c(k+1)\). It states that either both values are greater than \(\max(c)\), or
+\(\phi_{21}\) encodes the first part of the relationship between \(x(loop)\) and
+\(x(k+1)\). It states that either both values are greater than \(\max(x)\), or
 both have the same floor. This is the first part of the region encoding.
 \(\phi_{22}\) handles the special case where the fractional part of the value is
 equal to zero. Since clock guards can test for equality, if the clock value is
-less than \(\max(c)\), either the clock value at both time instances has a
+less than \(\max(x)\), either the clock value at both time positions has a
 fractional value of 0 or neither do. Finally, \(\phi_{23}\) completes the region
 encoding by considering the relationship between values of different clocks,
 asserting that the relationship between two clock values \(\{<,>,=\}\) is
@@ -803,12 +865,40 @@ time. Time in these traces is said to ``slow down'', because often each successi
 loop of the lasso executes in a smaller amount of time than the loop before.
 Because these represent unrealistic scenarios, they are often excluded from
 consideration in many TA models. It is sufficient to require that every clock is
-either reset within the loop, or has a value greater than \(max(c)\) at position
+either reset within the loop, or has a value greater than \(max(x)\) at position
 \(k\), which is shown in \(\phi_{24}\). The vector \(\overleftarrow{inloop}\)
 has length \(k+2\), and each bit \(i\) is 1 iff \(i \geq loop\). Using this
 vector, we can determine if a given clock is reset within the loop portion of
 the trace.
 
+\section{Equivalence}\label{equivalence}
+
+Using the definitions presented above, we are now ready to define our TA network
+in BitVector logic as follows:
+\[\phi_{network} := \phi_{init} \land \phi_{trans} \land \phi_{sync} \land \phi_{loop}\]
+
+We argue that this is a correct and complete representation of all lasso-shaped,
+non-Zeno runs given the bound of \(k\).
+
+Both encodings contrain the clocks, variables, and timed automata to their
+respective initial positions at time position 0. For variables and clocks these
+contraints are identical, as both assign the desired value at time position 0.
+For states our encoding uses the \(\overleftarrow{state_{q}}\) aliases to
+require that the TA begins in the initial state, despite not having state
+BitVectors. Because the state alias is only true when one of the transitions
+whose source is that state is true, the constraint is valid. Our clock
+\(\delta(l)\) ensures that all clocks progress at the same rate, while clock
+resets and variable assignments are only allowed if one of the corresponding
+transitions are active.
+
+As for the transitions, although we have broken up \(\varphi_{7}\) into several
+pieces, the functionality remains the same. We ensure that in order for a
+transition to be valid, its destination state must be active in the next time
+position, the clock and variable constraints must be satisfied, all assignments
+must be enforced, and the invariants of the source and destination state must be
+true at the moment of transition. Like TACK, we allow that at the moment of
+transition, only one of the two invariants must be satisfied, using the concept
+of weak satisfaction to formalize this relaxation.
 
 \section{Evaluation}\label{evaluation}
 In this chapter we present the results of several experimental evaluations of
@@ -887,7 +977,7 @@ at the same time.
 
 \begin{table}
 \setstretch{0.6}
-\center
+\centering
 \caption{Time required to solve the Fischer Benchmark Properties}
 \begin{tabular}{c|c|r r r r r r r r r}
 \toprule
@@ -973,4 +1063,10 @@ The Token Ring protocol models a ring of processes that pass a token between
 themselves, along with a process that models the ring itself.
 
 \section{Conclusion}\label{conclusion}
+
+\newpage
+
+\bibliography{smtTranslation}
+\bibliographystyle{ieeetr}
+
 \end{document}
