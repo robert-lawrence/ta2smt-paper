@@ -61,6 +61,24 @@ a significant overhead in
 \fi
 \section{Preliminaries}\label{prelims}
 \subsection{Timed Automata}\label{timed-automata}
+
+Timed Automata are a useful model for many interactions that require precise
+timing mechanisms. Each Timed Automaton has a set of states, one of which is
+active at any given moment, much like a Finite State Machine. Also like a FSM, a
+Timed Automaton has a set of transitions that allow it to move between different
+states. However these transitions come with powerful timing properties that
+allow for finer control over the progression of the automata. Included with our
+automata is a network of clocks and integer variables. Clocks progress as time
+passes, and can be used alongside variables as prerequisites for taking
+transitions and remaining in states. Transitions can also reset these clocks
+(and assign new values to variables), allowing for communication and shared
+state between different Timed Automata. For explicit synchronization, we will
+define a set of synchronization primitives that can be used to coordinate
+transitions between different automata. Finally, states can be labeled with
+atomic propositions, to aid in defining model properties that we will then
+verify over the network. To begin, we review the formal definition of a network
+of timed automata.
+
 Let \(AP\) be a set of atomic propositions, and let \(Act\) be a set of
 synchronization events. In addition we define a null event \(\tau\).
 \(Act_{\tau}\) is the set \(Act \cup \{\tau\}\). Let \(X\) be a finite set of
@@ -140,7 +158,7 @@ reset back to zero.
 A formula in \cltloc\ consists of atomic propositions, clock formulas, and
 formulas over integer variables, which are combined using the standard LTL
 operators of \(\mathcal{X}\) (next) and \(\mathcal{U}\) (until), as well as the
-derived overators \(\mathcal{G}\) (globally), \(\mathcal{F}\) (future), and
+derived operators \(\mathcal{G}\) (globally), \(\mathcal{F}\) (future), and
 \(\mathcal{R}\) (release). A clock formula compares the value of the clock to a
 given natural number, for instance \(x > 7\). A variable formula, on the other
 hand, can compare not only individual variables but also arithmetic combinations
@@ -166,17 +184,17 @@ two positions.
 
 \subsection{TACK \cltloc\ Translation}\label{prelim-tack}
 
-The TACK\cite{tack20:1} tool developed by Menghi et al.\ converts Bounded
+The TACK\cite{tack20} tool developed by Menghi et al.\ converts Bounded
 Satisfiability Checking problems into the CLTLoc language. TACK uses Metric
-Interval Temporal Logic to specify the property to be checked for satisfiabilty,
+Interval Temporal Logic to specify the property to be checked for satisfiability,
 which allows for more compact and powerful specifications of the desired
 properties to be checked. Once the Timed Automata network and the MITL property
 have been converted into CLTLoc, TACK then uses the tool Zot to convert this
-intermediate represetation of the problem into the SMT-LIB2 language, which is
+intermediate representation of the problem into the SMT-LIB2 language, which is
 supported by many modern SMT solvers. Zot was designed with a modular
 architecture to allow for several different strategies and algorithms that can
 be used to convert its input. Currently the most successful Zot plugin for
-CLTLoc Bounded Model Checking is ae2sbvzot. We will provide an overview of both
+CLTLoc Bounded Model Checking is \aez. We will provide an overview of both
 the TACK encoding of Timed Automata in CLTLoc and the ae2sbvzot translation of
 CLTLoc into SMT-LIB2.
 
@@ -463,7 +481,7 @@ compute. Since we have already encoded the active transition into BitVector
 form, we can exploit the fact that given the active transition \(t\), the active
 state of the TA is simply the source state of the transition, or \(t_{-}\).
 Therefore all that is needed is to define a set of aliases that exploit this
-equivalence. To this end we define each state as the bitwise disjunction of all
+equivalence. To this end we define each state as the bit-wise disjunction of all
 the transitions whose source is that state.
 
 \[\underset{q \in Q}{\forall}\ \ state_q := \underset{t \in \mathcal{T}|t_{-} = q}{\BitOr}trans_t\]
@@ -475,7 +493,7 @@ states and transitions, the possible values of a bounded integer variable are
 not unrelated objects in a set, but integers that must respect the operations of
 addition and subtraction. For each variable \(n \in Int\) we still construct a
 bit representation \(\overleftarrow{vb_{n,j}}_{[k+2]}\), where each BitVector
-has length \(k+2\). However the difference is that the values are encoded in 2s
+has length \(k+2\). However the difference is that the values are encoded in twos
 complement notation, and the number of BitVectors is chosen so that the vectors
 are capable of representing the entire range of values for the given bounded
 integer variable. We will define \(\lambda(n)\) as the number of bits needed for
@@ -566,7 +584,7 @@ the terms defined can represent many illegal traces as well. Timed Automata in
 our network cannot simply take any transition as they please, they must obey
 certain restrictions. These restrictions take the form of clock guards on a
 transition, a state invariant that prevents a TA from staying in a state
-indefinitely, clock progression contraints, as well as many others. To ensure
+indefinitely, clock progression constraints, as well as many others. To ensure
 that our encoding only allows for valid traces, we will formalize these
 constraints in BitVector logic for our SMT solver to use when performing the
 Bounded Model Checking.
@@ -880,9 +898,9 @@ in BitVector logic as follows:
 We argue that this is a correct and complete representation of all lasso-shaped,
 non-Zeno runs given the bound of \(k\).
 
-Both encodings contrain the clocks, variables, and timed automata to their
+Both encodings constrain the clocks, variables, and timed automata to their
 respective initial positions at time position 0. For variables and clocks these
-contraints are identical, as both assign the desired value at time position 0.
+constraints are identical, as both assign the desired value at time position 0.
 For states our encoding uses the \(\overleftarrow{state_{q}}\) aliases to
 require that the TA begins in the initial state, despite not having state
 BitVectors. Because the state alias is only true when one of the transitions

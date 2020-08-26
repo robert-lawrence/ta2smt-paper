@@ -1,0 +1,20 @@
+@article{tack20,
+    author = {Menghi, Claudio and Bersani, Marcello M. and Rossi, Matteo and Pietro, Pierluigi San},
+    title = {Model Checking MITL Formulae on Timed Automata: A Logic-Based Approach},
+    year = {2020},
+    issue_date = {May 2020},
+    publisher = {Association for Computing Machinery},
+    address = {New York, NY, USA},
+    volume = {21},
+    number = {3},
+    issn = {1529-3785},
+    url = {https://doi.org/10.1145/3383687},
+    doi = {10.1145/3383687},
+    abstract = {Timed Automata (TA) is de facto a standard modelling formalism to represent systems when the interest is the analysis of their behaviour as time progresses. This modelling formalism is mostly used for checking whether the behaviours of a system satisfy a set of properties of interest. Even if efficient model-checkers for Timed Automata exist, these tools are not easily configurable. First, they are not designed to easily allow adding new Timed Automata constructs, such as new synchronization mechanisms or communication procedures, but they assume a fixed set of Timed Automata constructs. Second, they usually do not support the Metric Interval Temporal Logic (MITL) and rely on a precise semantics for the logic in which the property of interest is specified, which cannot be easily modified and customized. Finally, they do not easily allow using different solvers that may speed up verification in different contexts.This article presents a novel technique to perform model checking of Metric Interval Temporal Logic (MITL) properties on TA. The technique relies on the translation of both the TA and the MITL formula into an intermediate Constraint LTL over clocks (CLTLoc) formula, which is verified through an available decision procedure. The technique is flexible, since the intermediate logic allows the encoding of new semantics as well as new TA constructs, by just adding new CLTLoc formulae. Furthermore, our technique is not bound to a specific solver as the intermediate CLTLoc formula can be verified using different procedures.},
+    journal = {ACM Trans. Comput. Logic},
+    month = apr,
+    articleno = {26},
+    numpages = {44},
+    keywords = {timed automata, Model checking, signal-based semantics}
+}
+
