@@ -41,8 +41,10 @@
 
 %\maketitle
 \tableofcontents
+\newpage
 \listoffigures
 \listoftables
+\newpage
 
 \section{Introduction}\label{introduction}
 \iffalse
@@ -316,7 +318,7 @@ value of 6, which satisfies the guard $x>5$.
 Notice in the above trace the value of clock $x$ during the transition from
 state $q_{2}$ to state $q_{3}$. State $q_{2}$ has an invariant requiring that
 the value of clock $x$ be strictly less than $2$, however at the moment of
-transition $x() + \delta() = 2$. Is this trace therefore illegal? This raises an
+transition $x(2) + \delta(2) = 2$. Is this trace therefore illegal? This raises an
 interesting question: at the moment of transition, what is the active state?
 Possible answers could include the source state, the destination, both, or
 neither. Different models of Timed Automata implement this
@@ -1086,59 +1088,81 @@ relation.
 \begin{center}
 \begin{tabular}{c}
 Sync Constraints \\
-\(\phi_{14} := \underset{t \in T: t_\epsilon = \alpha!}{\BitAnd} \overleftarrow{trans_t} \Rightarrow (\neg \underset{t' \in T: t'_\epsilon = \alpha!\land t'\neq t}{\BitOr} \overleftarrow{trans_{t'}}) \land (\underset{t' \in T: t_\epsilon = \alpha?}{\BitOr} \overleftarrow{trans_{t'}})\) \\
+\(\phi_{14} := \underset{t \in T: t_\epsilon = \alpha!}{\BitAnd} \overleftarrow{trans_t} \Rightarrow (\neg \underset{t' \in \{T \backslash t\}: t'_\epsilon\in \{\alpha!,\alpha\#\}}{\BitOr} \overleftarrow{trans_{t'}}) \land (\underset{t' \in T: t_\epsilon = \alpha?}{\BitOr} \overleftarrow{trans_{t'}})\)
+  \\
 \midrule
-\(\phi_{15} := \underset{t \in T: t_\epsilon = \alpha?}{\BitAnd} \overleftarrow{trans_t} \Rightarrow (\neg \underset{t' \in T:t_\epsilon = \alpha?\land t'\neq t}{\BitOr} \overleftarrow{trans_{t'}}) \land (\underset{t' \in T:t_\epsilon = a!}{\BitOr} \overleftarrow{trans_{t'}})\) \\
+\(\phi_{15} := \underset{t \in T: t_\epsilon = \alpha?}{\BitAnd} \overleftarrow{trans_t} \Rightarrow (\neg \underset{t' \in \{T\backslash t\}:t_\epsilon = \alpha?}{\BitOr} \overleftarrow{trans_{t'}}) \land (\underset{t' \in T:t_\epsilon = a!}{\BitOr} \overleftarrow{trans_{t'}})\)
+  \\
 \midrule
 \(\phi_{16} := \underset{t \in T:t_\epsilon = \alpha\#}{\BitAnd} \overleftarrow{trans_t} \Rightarrow \neg (\underset{t' \in T:t_\epsilon = \alpha\#\land t' \neq t}{\BitOr} \overleftarrow{trans_{t'}}) \) \\
 \midrule
-\(\phi_{17} := \underset{\alpha \in Act}{\bigwedge}\ \underset{l \in [0,k+2]}{\underset{i \in [1,|\mathcal{A}|]}{\bigwedge}} (\underset{t_\epsilon = \alpha\#}{\underset{t \in T_i:}{\bigvee}} \overleftarrow{trans_t}^{[l]}) \rightarrow \) \\
+\(\phi_{17} := \underset{t \in T:t_\epsilon = \alpha@}{\BitAnd} \overleftarrow{trans_t} \Rightarrow (\underset{t' \in T: t_\epsilon = \alpha\#}{\BitOr} \overleftarrow{trans_{t'}}) \) \\
+\midrule
+\(\phi_{18} := \underset{\alpha \in Act}{\bigwedge}\ \underset{l \in [0,k+2]}{\underset{i \in [1,|\mathcal{A}|]}{\bigwedge}} (\underset{t_\epsilon = \alpha\#}{\underset{t \in T_i:}{\bigvee}} \overleftarrow{trans_t}^{[l]}) \rightarrow \) \\
 \((\underset{j \neq i}{\underset{j \in [1,k]:}{\bigwedge}} (\underset{t'_\epsilon = \alpha@}{\underset{t' \in T_j: }{\bigvee}} \overleftarrow{state_{t'_-}}^{[l]} \land \sigma_{\delta}(l,t'_{\gamma_{c}})  \land \mu(l,t_{\gamma_v})) \rightarrow \underset{t'_\epsilon = \alpha@}{\underset{t' \in T_j:}{\bigvee}} \overleftarrow{trans_{t'}}^{[l]}) \) \\
 \midrule
-\(\phi_{18} := \underset{t \in T:t_\epsilon = \alpha@}{\BitAnd} \overleftarrow{trans_t} \Rightarrow (\underset{t' \in T: t_\epsilon = \alpha\#}{\BitOr} \overleftarrow{trans_{t'}}) \) \\
-\midrule
-\(\phi_{sync} := (\phi_{14} \BitAnd \phi_{15} \BitAnd \phi_{16} \BitAnd \phi_{18} =\ \BitNeg \overleftarrow{0} ) \land \phi_{17} \)
+\(\phi_{sync} := (\phi_{14} \BitAnd \phi_{15} \BitAnd \phi_{16} \BitAnd \phi_{17} =\ \BitNeg \overleftarrow{0} ) \land \phi_{18} \)
 
 \end{tabular}
 \end{center}
 
-Different Timed Automata in our network use the synchronization channels in
-\(Act_\tau\) to communicate and coordinate their transitions between states.
-Each element in \(Act\) consists of a channel, which we will represent with
-Greek letters \(\alpha, \beta, etc\), and an action to be performed over the
-channel. Our implementation supports four actions which are represented using
-four punctuation symbols. The first two, \(send(!)\) and \(receive(?)\), capture
-one-to-one communication. For every channel \(\alpha\) there can be at most one
-active transition with \(\alpha!\), and similarly at most one active transition
-with \(\alpha?\). Informally this means that only one timed automaton can send
-over the channel at a time, and only one can receive at a time. Furthermore each
-send must be matched by a receive and vice versa. Formula \(\phi_{14}\) captures
-these semantics for a transition with action \(\alpha!\) for some channel
-\(\alpha\). Such a transition implies that no other transition with the action
-\(\alpha!\) can be active in the same time position, and furthermore one of the
-transitions with the action \(\alpha?\) must be active. Formula \(\phi_{15}\)
-captures the same constraints from the point of view of the receiving
-transition. A transition with action \(\alpha?\) implies both that no other
-receiving transition is active, and also that there exists an active sending
-transition over the same channel.
+The synchronization constraints capture the semantics defined in table
+\ref{table:sync-def}. Formula $\phi_{14}$ and $\phi_{15}$ capture the contraints
+for one-to-one synchronization, while the others cover broadcast
+synchronization.
 
-The second pair of synchronization communication is termed ``broadcast
-synchronization''. Like the one-to-one communication, there is a broadcast send
-(\#) and a broadcast receive (@). However there are several differences in the
-semantics of broadcast signals. To begin, while a broadcast receive signal must
-be matched with a broadcast send, the reverse is not true, and a broadcast send
-signal can be matched with any number of broadcast receives, including zero.
-While multiple broadcast receive signals on the channel can be fired at the same
-time, there can only be one broadcast send signal at a time per channel. The
-other important distinction is that the broadcast send signal ``compels'' the
-other Timed Automata to respond with broadcast receive if they are able to. By
-this we mean that when a Timed Automaton fires a transition with a broadcast-send event, all other Timed Automata with an available transition containing
-a broadcast-receive signal (on the same communication channel) must take the
-transition. By ``available'' we mean that the Timed automaton is in the source
-state of the transition and all of the clock and variable guards are satisfied.
-Formulas \(\phi_{16}\) and \(\phi_{18}\) describe these constraints for
-broadcast send and receive, respectively, while formula \(\phi_{17}\) describes
-the ``compulsive'' nature of the broadcast-send transition.
+\emph{Properties $\phi_{14}-\phi_{15}$} The first formula in this group requires
+firstly that when a transition marked with $\alpha{!}$ (one-to-one send) is
+taken, no other transition with the $\alpha{!}$ or $\alpha\#$ event may be
+active, and secondly that there exists at least one active transition with the
+event $\alpha{?}$ (one-to-one receive). The second formula is very similar,
+requiring that when a transition with the event $\alpha{?}$ is active, no other
+transition with the event $\alpha{?}$ may be active, and there must be at least
+one active transition with the event $\alpha{!}$.
+
+\emph{Properties $\phi_{16}-\phi_{18}$} Formulas $\phi_{16}$ and $\phi_{17}$ are
+similar to those for one-to-one communication, with modifications for the
+different semantics of broadcast synchronization. $\phi_{16}$ requires that when
+a transition with the event $\alpha\#$ (broadcast send) is active, no other
+transition with the same event may be active. The difference from $\phi_{14}$ is
+that there is no requirement for an active transition labelled with the
+$\alpha@$ (broadcast receive) event. $\phi_{17}$ requres that when a transition
+with the event $\alpha@$ is active, there exists at least one active transition
+with the event $\alpha\#$. Note that multiple transitions are allowed to receive
+the same broadcast signal. The final formula $\phi_{18}$ handles the
+``compulsive'' nature of broadcast synchronization. When there exists an active
+transition with the broadcast send event on a channel $\alpha$, for all other TA
+in the network we require that if there exists a transition
+\begin{itemize}
+  \item that has the broadcast receive event on channel $\alpha$
+  \item whose source state equal to the current state of the TA
+  \item whose guards are all satisfied
+\end{itemize}
+then the TA is required to take (have active) a transition with the event
+$\alpha@$.
+
+%The other important distinction is that the broadcast send signal ``compels''
+%the other Timed Automata to respond with broadcast receive if they are able to.
+%By this we mean that when a Timed Automaton fires a transition with a
+%broadcast-send event, all other Timed Automata with an available transition
+%containing a broadcast-receive signal (on the same communication channel) must
+%take the transition. By ``available'' we mean that the Timed automaton is in the
+%source state of the transition and all of the clock and variable guards are
+%satisfied. Formulas \(\phi_{16}\) and \(\phi_{17}\) describe these constraints
+%for broadcast send and receive, respectively, while formula \(\phi_{18}\)
+%describes the ``compulsive'' nature of the broadcast-send transition.
+
+%Each element in \(Act\) consists of a channel, which we
+%will represent with Greek letters \(\alpha, \beta, etc\), and an action to be
+%performed over the channel. Our implementation supports four actions which are
+%represented using four punctuation symbols. The first two, \(send(!)\) and
+%\(receive(?)\), capture one-to-one communication. For every channel \(\alpha\)
+%there can be at most one active transition with \(\alpha!\), and similarly at
+%most one active transition with \(\alpha?\). Informally this means that only one
+%timed automaton can send over the channel at a time, and only one can receive at
+%a time. Furthermore each send must be matched by a receive and vice versa.
+
+
 \subsection{Loop Constraints}\label{constraints-loop}
 
 \begin{center}
