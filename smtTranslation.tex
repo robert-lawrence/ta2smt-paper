@@ -5,7 +5,6 @@
 \usepackage[T1]{fontenc}
 \usepackage{graphicx}
 \graphicspath{ {./images/} }
-\usepackage{xcolor}
 \usepackage{grffile}
 \usepackage{longtable}
 \usepackage{wrapfig}
@@ -20,6 +19,7 @@
 \usepackage{multirow}
 \usepackage{booktabs}
 \usepackage{setspace}
+
 \newcommand*\BitAnd{\mathbin{\&}}
 \newcommand*\BitOr{\mathbin{|}}
 \newcommand{\BitNeg}{!}
@@ -28,16 +28,21 @@
 \renewcommand{\arraystretch}{1.0}
 \setlength{\parskip}{1em}
 \setlength{\abovetopsep}{0.5em}
-\renewcommand{\baselinestretch}{1.3}
+%\renewcommand{\baselinestretch}{1.3}
+\setstretch{1.4}
 \newcommand{\cltloc}{CLTLoc}
 \newcommand{\aez}{ae2sbvzot}
-\author{Robert Smith}
-\date{\today}
-\title{SMT Translation}
+%\author{Robert Smith}
+%\date{\today}
+%\title{SMT Translation}
 \begin{document}
+\title{Improved Verification of Networks of Timed Automata}
+  \input{./frontpage/frontpage.tex}
 
-\maketitle
+%\maketitle
 \tableofcontents
+\listoffigures
+\listoftables
 
 \section{Introduction}\label{introduction}
 \iffalse
@@ -74,7 +79,7 @@ automata is a network of clocks and integer variables. Clocks progress as time
 passes, and can be used alongside variables as prerequisites for taking
 transitions and remaining in states. Transitions can also reset these clocks
 (and assign new values to variables), allowing for communication and shared
-state between different Timed Automata. For explicit synchronization, we may
+state between different Timed Automata. For explicit synchronization, we
 define a set of synchronization primitives that can be used to coordinate
 transitions between different automata. Finally, states can be labeled with
 atomic propositions, to aid in defining model properties that we will then
@@ -91,21 +96,24 @@ visualize important concepts.
 %\end{figure}
 \begin{figure}[h]
   \centering
-  \includegraphics[width=0.5\textwidth]{exampleTA-blank}
+  \includegraphics[width=0.5\textwidth]{minTA-blank}
   \caption{A basic Timed Automaton}
   \label{fig:example-blank}
 \end{figure}
 
 As we can see in figure \ref{fig:example-blank}, Timed Automata have many
-similarities with Finite State Machines and other automata. The example TA
-consists of a finite set of states $Q = \{q_{1},q_{2},q_{3}\}$, and a finite set
-of transitions $T = \{t_{1},t_{2},t_{3},t_{4},t_{5}\}$. Like a finite state
-machine, at a given moment in time there is one state that is ``active''. The TA
-can take transitions that may change its state, with the condition that the
-source of the transition must be the currently active state. As an example, if
-the current active state is $q_{3}$, then either $t_{4}$ or $t_{5}$ can be
-taken. As seen with transition $t_{5}$, the source and destination state of a
-transition need not be distinct states.
+similarities with Finite State Machines and other automata. For a given
+automaton $\mathcal{A}_{i}$, the example TA consists of a finite set of states
+$Q_{i} = \{q_{1},q_{2},q_{3}\}$, and a finite set of transitions
+$T_{i} = \{t_{1},t_{2},t_{3},t_{4}\}$. Like a finite state machine, at a given
+moment in time there is one state that is ``active''. The TA can take
+transitions that may change its state, with the condition that the source of the
+transition must be the currently active state. We denote the source state of a
+transition $t$ as $t_{-}$, and the destination state as $t_{+}$. As an example,
+if the current active state is $q_{1}$, then either $t_{1}$ or $t_{2}$ can be
+taken. Although not shown in this example, the source and destination state of a
+transition may be the same state, and there may be multiple transitions with
+identical source states and identical destination states.
 
 In addition to states and transitions, TA are enriched with clocks and bounded
 integer variables. Clocks are variables over $\mathbb{R}_{\geq 0}$ that increment with the
@@ -116,7 +124,7 @@ have to be explicitly modified by the TA.
 
 \begin{figure}[h]
   \centering
-  \includegraphics[width=0.5\textwidth]{exampleTA-big}
+  \includegraphics[width=0.6\textwidth]{minTA-big}
   \caption{A Timed Automaton with clock $x$ and variable $n$.}
   \label{fig:example-big}
 \end{figure}
@@ -126,12 +134,12 @@ Figure \ref{fig:example-big} shows the same example TA modified with transition
 guards, transition assignments, and state invariants. Transition guards are
 conditions over either clocks or variables that prevent the associated
 transition from being taken when they do not evaluate to true. As an example,
-transition $t_{4}$ can only be taken when the value of clock $x$ is greater than
+transition $t_{2}$ can only be taken when the value of clock $x$ is greater than
 $5$. Assignments on the other hand modify the value of a clock or variable
 \emph{after} the transition has been taken. For example, it is perfectly valid
-for transition $t_{5}$ to be taken with $x=3,n=3$, even though the assignment
-$n=n+1$ increments the value of $n$ to $4$, which is larger than the value
-accepted by the transition guard $n<4$. Variables can be assigned to any value,
+for transition $t_{2}$ to be taken when $x=6$, even though the assignment
+$x=0$ resets the value of $x$ to $0$, which is smaller than the value
+accepted by the transition guard $x>5$. Variables can be assigned to any value,
 while clocks can only be reset to $0$. The third feature to mention are the
 state invariants. In our example there is only one, $x<2$ which is associated
 with state $q_{2}$. When a state is active, its invariant (if any) is required
@@ -142,18 +150,57 @@ $q_{2}$ before clock $x$ reaches a value of $2$.
 In addition to clocks and variables, TA also offer a powerful synchronization
 mechanism for different automata in the same network to coordinate. Any
 transition may contain a synchronization event of the form
-$\{channel \times action\}$, where $channel$ can be any symbol and
-$action \in \{!,?,\#,@\}$. The full semantics of these synchronization events
-will be discussed later, but as an example a transition with the event $\alpha!$
-may only be taken iff at the same moment another timed automaton executes a
-transition with the event $\alpha?$. These allow us to coordinate the execution
-of multiple transitions in different timed automata.
+$\{channel \times sync\}$, where $channel$ can be any symbol and
+$sync \in \{!,?,\#,@\}$. Two different timed automata can synchronize their
+transitions by labelling them with the same synchronization channel, and using
+the actions to describe the type of synchronization desired.
+
+\begin{table}
+  \centering
+  \begin{tabular}{l p{0.7\textwidth}}
+    \textbf{Type} & \textbf{Synchronization Semantics} \\
+    \midrule
+    One-to-one & Whenever a TA $\mathcal{A}_{i}$ takes a transition with a
+                 syncronization event $\alpha{!}$, there exists exacty one
+                 $\mathcal{A}_{j}$, $i\neq j$, such that in the same instant
+                 $\mathcal{A}_{j}$ has an active transition $t'$ with the
+                 synchronization event $\alpha{?}$, and vice versa. \\
+    \midrule
+    Broadcast &  Whenever a TA $\mathcal{A}_{i}$ takes a transition with a
+                synchronization event $\alpha\#$, every other TA
+                $\mathcal{A}_{j}$ must not simultaneously take a transition with
+                the same event, and must either simultaneously take a transition
+                labelled with $\alpha@$, or there must not exist a transition
+                $t' \in \mathcal{A}_{j}$ such that $t_{-}$ is the currently
+                active state, $\alpha@$ is the synchronization event, and the
+                clock and variable guards of $t'$ are satisfied.
+    \\
+    \midrule
+  \end{tabular}
+  \caption{Supported Synchronization Events}
+  \label{table:sync-def}
+\end{table}
+
+As shown in table \ref{table:sync-def}, two types of synchronization are
+defined. The first type is one-to-one synchronization, which has two associated
+operators, one signifying one-to-one `send' (${!}$), and the second for
+one-to-one receiving (${?}$). A transition labelled with $\alpha{!}$, for some
+channel $\alpha$, can only be fired if at the same moment in time, another TA
+takes a transition labelled with the $\alpha{?}$ event. The second type of
+synchronization available is termed `broadcast' synchronization, and again we
+have two operators, broadcast-send ($\#$) and broadcast-receive (${@}$). Like
+one-to-one synchronization, for a given channel $\alpha$ there can only be one
+active transition with the event $\alpha\#$, however the difference is that
+there can be 0,1, or multiple automata that sync using broadcast-receive at
+once. In addition, each automaton is \emph{required} to perform a broadcast-sync
+if it is able to, meaning that there exists a transition $t$ such that $t_{-}$
+is the currently active state, and all guards of the transition are satisfied.
 
 
 With the basic concepts introduced, we will formally define the Timed Automata
 discussed in this paper. Let \(AP\) be a set of atomic propositions, and let \(Act\) be a set of
-synchronization events of the form $Act \subset \{channel \times action\}$,
-where channel is a set of symbols and $action \in \{!,?,\#,@\}$. In addition we
+synchronization events of the form $Act \subset \{channel \times sync\}$,
+where channel is a set of symbols and $sync \in \{!,?,\#,@\}$. In addition we
 define a null event \(\tau\). \(Act_{\tau}\) is the set \(Act \cup \{\tau\}\).
 Let \(X\) be a finite set of clocks, and \(Int\) a finite set of integer-valued
 variables. \(\Gamma(X)\) is the set of clock constraints, where a clock
@@ -163,7 +210,7 @@ constraint \(\gamma\) is a relation
 clock assignments, where each assignment has the form \(x {=} 0\), where
 \(x \in X\iffalse{,\ c {\in} \mathbb{Z}^+}\fi\). \(Assign(Int)\) is a set of
 variable assignments of the form \(y := exp\), where
-\(exp := exp + exp\BitOr exp - exp\BitOr exp \times exp\BitOr exp \div exp\BitOr n\BitOr c\),
+\(exp := exp + exp\BitOr exp - exp\BitOr n\BitOr c\),
 \(n \in Int\) and \(c \in \mathbb{Z}\). \(\Gamma(Int)\) is the set of integer
 variable constraints, where a variable constraint \(\gamma\) is defined as
 \(\gamma := n \sim c\BitOr n \sim n'\BitOr \neg \gamma\BitOr \gamma \land \gamma\),
@@ -197,25 +244,135 @@ to the properties of one timed automaton in particular, we will append a
 numerical subscript to the set in question, for example \(X_i\) to refer to the
 clocks used by the specific timed automaton \(\mathcal{A}_{i} \in \mathcal{A}\).
 
-\subsection{Bounded Satisfiability Checking}\label{bounded-sat}
+\subsection{Bounded Model Checking}\label{bounded-sat}
+
+% TODO: define trace, create graphic showing trace progression
+%       define liveness, 2 types of edges
+%       (cut and paste existing sections on this topic from later sections)
+%       then move on to the TACK section
+%
+
+Bounded Model Checking refers to the problem of evaluating if a given network of
+timed automata satisfies a given model, or property. To perform this evaluation,
+the TA network along with the property to be evaluated are transformed into a
+form acceptable by a Satisfiability Modulo Theories, or SMT solver. The solver
+then searches all possible executions of the system to determine if the property
+is satisfied. Before we can discuss this process, we must describe what we mean
+by an execution of a network of timed automata.
+
+At a given position in time, the TA network can be described by the currently
+active states, as well as the values of the clocks and integer variables.
+Because the execution of a TA is a series of instantaneous state transitions,
+interspersed throughout time, we can represent a TA execution as a series of
+`snapshots' showing these moments of transitions. In order to achieve this
+representation, we use the concept of a trace. A trace consists of an infinite
+sequence of \emph{time positions} $S = \{s_{0}s_{1}s_{2}\ldots\}$. Each time
+position contains the active state of each timed automaton, the current values
+of each clock and variable, the amount of time $\delta$ that will elapse before
+the next position, and the transition to be taken by each timed automaton at the
+next time position. For a given position we will use $l[i]$ and $t[i]$
+to denote the active state and transition of automaton $\mathcal{A}_{i}$.
+
+\begin{figure}[h]
+  \centering
+  \includegraphics[width=0.6\textwidth]{trace-shift-min}
+  \caption{An example trace through 4 positions.}
+  \label{fig:trace-min}
+\end{figure}
+
+In figure \ref{fig:trace-min} we can see a trace of the Timed Automaton defined
+in figure \ref{fig:example-big}, which has been given an index of 1. To prevent
+the value of $t[i]$ being undefined at position $0$, the value of $t[i]$
+corresponds to the transition taken in the following time position. However for
+clarity in the traces shown here, the values of $t[1]$ have been shifted to the
+right by one position, so that the active transition is lifted over the position
+in time where the transition actually occurs. At the top of the trace $l[1]$
+tracks the currently active state of the timed automaton. In this simple trace
+the automaton begins in state $q_{1}$, transitions to $q_{2}$, remains in
+$q_{2}$ for another position, and then transitions to $q_{3}$. Below the active
+state we show the active values of both the variable $n$ and the clock $x$ at
+the given positions. The value $\delta$ shows the amount of time that passes
+between the current state, and the immediately following state.
+
+One surprising observation is that the value of the clock $x$ does not seem to
+change between positions $0$ and $1$, despite $\delta$ indicating that $6$ units
+of time has passed. Recall that transition $t_{2}$ resets the value of the clock
+$x$ to zero, and that the trace capture the values of clocks and variables
+\emph{after} any assignments have been applied.
+
+\begin{figure}[h]
+  \centering
+  \includegraphics[width=0.6\textwidth]{trace-shift-delta}
+  \caption{A trace highlighting the evaluation of a clock guard.}
+  \label{fig:trace-delta}
+\end{figure}
+
+Figure \ref{fig:trace-delta} shows how we can compute the value of clock $x$ at
+the moment of the transition, before the reset is applied. By combining the
+values of $x$ and $\delta$, we obtain the value of $x$ that is used to determine
+if the clock guard of transition $t_{2}$ is satisfied. We see that $x$ has a
+value of 6, which satisfies the guard $x>5$.
+
+Notice in the above trace the value of clock $x$ during the transition from
+state $q_{2}$ to state $q_{3}$. State $q_{2}$ has an invariant requiring that
+the value of clock $x$ be strictly less than $2$, however at the moment of
+transition $x() + \delta() = 2$. Is this trace therefore illegal? This raises an
+interesting question: at the moment of transition, what is the active state?
+Possible answers could include the source state, the destination, both, or
+neither. Different models of Timed Automata implement this
+differently\cite{TODO-give-example}. In our model, the TA is always in exactly
+one state at every instant in time. If at the moment of transition the TA
+remains in the source state, the transition is said to be ``right-closed'' or
+equivalently ``left-open'', because the interval of time that the TA spends in
+\(t_{-}\) ends in a closed interval, while the inteval of time that the TA
+spends in \(t_{+}\) begins in an open interval. Conversely if the TA is located
+in the destination state at the moment of transition, we say that it is
+``left-closed'', which also implies that it is right-open. Returning to our
+example trace, if the timed automaton is not in state $q_{2}$ in the instance of
+transition, then the strict inequality in the state invariant can be satisfied
+with equality at the instance of transition, since the automaton is not actually
+in that state at that final moment. To formalize this notion we introduce the
+weak clock relation $\sim_{w}$, which is defined as follows:
+\begin{align*}
+  x \sim_{w} c  \iff & (x \sim c\ \lor\ x = c) \ \ \sim \in \{<,>,\leq,\geq\} \\
+  x =_{w} c  \iff & false
+\end{align*}
+To make our trace more precise, we add for each TA $\mathcal{A}_{i}$ the term
+$edge^{RC}[i]$, which is true at a given time position iff the currently active
+edge is right-closed.
+
+\begin{figure}[h]
+  \centering
+  \includegraphics[width=0.6\textwidth]{trace-shift-full}
+  \caption{An example trace with edge variable.}
+  \label{fig:trace-full}
+\end{figure}
+
+Figure \ref{fig:trace-full} shows the same example trace as before, but with the
+addition of the edge variable. Like the transitions, it is shifted to the right
+by one position for ease of viewing. Notice that when transition $t_{3}$ is
+taken, the edge is left-closed, as is required by the invariant. The value of
+the edge variable is not shown during the null transition, however during a null
+transition either value is equivalent.
+
 
 When using Timed Automata to model real-time systems, a common desire is to
 verify that every valid trace of the system obeys a given constraint, or
 property. Problems of feasibility quickly arise however, due to the infinite
-length of these traces. Bounded Satisfiability Checking is a process in which
+length of these traces. Bounded Model Checking is a process in which
 timed automata traces of infinite length can be efficiently verified against a
 property. Since TA traces are infinite in
 length, we restrict ourselves to traces of the form
 \(s_0 s_1\ldots s_{l-1}{(s_l s_{l+1}\ldots s_{k-1}s_k)}^\omega\). These
-lasso-shaped traces consist of an initial sequence of states up until
+``lasso-shaped'' traces consist of an initial sequence of states up until
 \(s_{l-1}\), followed by a loop that can be repeated an infinite amount of times
 to form the full trace. Since the beginning of the loop is allowed to occur
 anywhere within the sequence, the only variable is the number of distinct states
-\(k\). Bounded Satisfiability Checking refers to checking if a given property is
+\(k\). Bounded Model Checking refers to checking if a given property is
 satisfied over lasso-shaped traces of up to length \(k\).
 The TA system along with the desired property are converted into a
-format suitable for parsing by a SAT or SMT solver. Then the solver is tasked
-with finding a counterexample to the property. If a counterexample is able to be
+format suitable for parsing by a SAT or SMT solver, which is then tasked
+with finding a counterexample to the property. If a counterexample is
 found, then there exists at least one trace that does not satisfy the provided
 property. Otherwise, the property is said to have been verified over the TA
 network up to the bound \(k\), as the solver has shown that no lasso-shaped
@@ -271,6 +428,23 @@ be used to convert its input. Currently the most successful Zot plugin for
 CLTLoc Bounded Model Checking is \aez. We will provide an overview of both
 the TACK encoding of Timed Automata in CLTLoc and the ae2sbvzot translation of
 CLTLoc into BitVector form.
+
+\begin{table}
+  \begin{tabular}{p{0.2\textwidth} p{0.7\textwidth}}
+    \toprule
+    \textbf{Type} & \textbf{Liveness Semantics} \\
+    \midrule
+    Strong transition liveness & Every TA will always transition at some point
+                                 in the future. \\
+    \midrule
+    Weak transition liveness & At least 1 TA will always transition at some
+                               point in the future. \\
+    \bottomrule
+  \end{tabular}
+  \caption{Liveness Semantics}
+  \label{table:liveness-def}
+\end{table}
+
 
 \begin{table}\label{tack-encoding}
   \centering
@@ -550,31 +724,14 @@ with \(\mathcal{T}_{i}[5] = t\). The base two representation of 5 is \(00101\), 
 \(\overleftarrow{trans_t}_{[k+2]}\) is equivalent to \((\neg tb_5 \BitAnd
 \neg tb_4 \BitAnd tb_3 \BitAnd \neg tb_2 \BitAnd tb_1)\).
 
-Another consideration we must make is the concept of a \emph{transition edge}.
-From the TACK paper, at the instant of transition the Timed Automaton is said to
-be in exactly one of the two possible states (\(t_{-}\) or \(t_{+}\)). If the TA
-remains in the source state, the transition is said to be ``right-closed'' or
-equivalently ``left-open'', because the interval of time that the TA spends in
-\(t_{-}\) ends in a closed interval, while the inteval of time that the TA
-spends in \(t_{+}\) begins in an open interval. Conversely if the TA is located
-in the destination state at the moment of transition, we say that it is
-``left-closed'', which also implies that it is right-open. While this may seem
-like an unnecessary distinction, it has real consequences for how we evaluate
-our networks. For example consider the case where the destination state
-\(t_{+}\) has the invariant \(x > 5\), but at the instant of transition, clock
-\(x\) is exactly equal to \(5\). Now the distinction between ``right-closed''
-and ``left-closed'' has a real consequence! Only a right-closed transition is
-valid, since a left-closed transition would place the TA in state \(t_{+}\) at
-the instant of transition, violating the invariant.
-
-We therefore add an additional term
-\(\overleftarrow{edge_{i}^{RC}}_{[k{+}2]},\ i \in [1,N]\) for each Timed
-Automaton in the network. When a bit is set to \(1\), it signifies that the
-active transition for the Timed Automaton at that time position is right-closed,
-and conversely a value of \(0\) means that it is left-closed. Although not every
-transition will be impacted by this term (for instance, the null transitions
-have no invariants that can be affected), it is a necessity for the correctness
-of our system.
+Another consideration we must make is for the transition edges. We add an
+additional term \(\overleftarrow{edge_{i}^{RC}}_{[k{+}2]},\ i \in [1,N]\) for
+each Timed Automaton in the network. When a bit is set to \(1\), it signifies
+that the active transition for the Timed Automaton at that time position is
+right-closed, and conversely a value of \(0\) means that it is left-closed.
+Although not every transition will be impacted by this term (for instance, the
+null transitions have no invariants that can be affected), it is a necessity for
+the correctness of our system.
 
 
 \subsection{States}\label{encoding-states}
@@ -615,9 +772,10 @@ k+1\) is a vector of \(\lambda(n)\) bits that represents the value of variable
 
 \subsection{Clocks}\label{encoding-clocks}
 
-Each clock \(x \in \mathcal{X}\) is defined as a function \(x\) that takes
-an integer argument and returns a real number, where the argument represents the
-time position and the return value is the value of the clock at that position.
+Each clock \(x \in \mathcal{X}\) is defined as a function \(x\) that takes an
+integer argument and returns a real number, where the argument represents the
+time position and the return value is the value of the clock at that position in
+time.
 
 \subsection{Complete Encoding}\label{complete-encoding}
 
@@ -806,7 +964,7 @@ variable \(n\) containing all transitions that assign a value to the variable.
 When none of these transitions are active, formula \(\phi_8\) ensures that the
 value of \(n\) remains unchanged.
 
-\subsection{Transitions}\label{consstraints-trans}
+\subsection{Transitions}\label{constraints-trans}
 
 \begin{table}
 \centering
@@ -833,7 +991,7 @@ value of \(n\) remains unchanged.
 \midrule
 \( \sigma_{w\delta}(l,\gamma_{c}) :=  \)&\(x(l) + \delta(l) \sim_{w} c\ |\ \sigma_{w\delta}(l,\gamma_{c}') \land \sigma_{w\delta}(l,\gamma_{c}'') \) \\
 \midrule
-\( \mu(l,\gamma_{v}) :=  \)&\(\overleftarrow{var_{v}(l)}_{[\lambda(v)]} \sim \overleftarrow{c}_{[\lambda(v)]}\ |\ \overleftarrow{v(l)}_{[\lambda(v)]} \sim \overleftarrow{v'(l)}_{[\lambda(v)]}\ |\ \neg \mu(l,\gamma_{v}')\ |\ \mu(l,\gamma_{v}') \land \mu(l,\gamma_{v}'') \) \\
+\( \mu(l,\gamma_{v}) :=  \)&\(\overleftarrow{var_{n}(l)}_{[\lambda(n)]} \sim \overleftarrow{c}_{[\lambda(n)]}\ |\ \overleftarrow{var_{n}(l)}_{[\lambda(n)]} \sim \overleftarrow{var_{n'}(l)}_{[\lambda(n)]}\ |\ \neg \mu(l,\gamma_{v}')\ |\ \mu(l,\gamma_{v}') \land \mu(l,\gamma_{v}'') \) \\
 \midrule
 \( \zeta(l,n,\exp) :=  \)&\( \overleftarrow{var_{j}(l)}_{[\lambda(n)]}\ |\ \overleftarrow{c}_{[\lambda(n)]}\ |\  \zeta(l,n,\exp') + \zeta(l,n,\exp'')\ |\  \zeta(l,n,\exp') - \zeta(l,n,\exp'') \) \\
 \midrule
@@ -844,64 +1002,85 @@ value of \(n\) remains unchanged.
 
 As a quick review, transitions consist of a source and destination state, a
 synchronization action, as well as (possibly empty) sets of clock constraints,
-variable constraints, clock assignments, and variable assignments. In the
-earlier chapter on initialization and progression, \(\phi_6\) was defined to
-ensure that the source and destination states were implemented correctly - that
-the destination of one transition is the source of the next.
+variable constraints, clock assignments, and variable assignments. In section
+\ref{constraints-init} on initialization and progression, \(\phi_6\) was defined
+to ensure that the source and destination states were implemented correctly -
+that the destination of one transition is the source of the next. We now
+encode the guard and assignment constraints of every transition in the TA network.
 
 
-We will first consider the transition guards. Each transition can have multiple
-guards, which consist of two types, clock guards and variable guards. Clock
-guards have the form \(x\ \sim\ c\), where \(x \in X\), \(c \in \mathbb{Z}\) and
-\(\sim \in \{<,>,\leq,\geq\}\). Formula \(\phi_9\) asserts that for every clock
-guard, its transition being active at time position \(l\) implies that at the
-instance of transition, the relationship \(\sim\) holds between the clock value
-and the value. Recall that if a transition is active at time position \(l\), the
-transition occurs in the instant between time position \(l\) and time position
-\(l+1\). Therefore, at the instance of the transition, the clock does not have
-the value \(x(l)\), but rather \(x(l) + \delta(l)\), delta being the special
-clock that defines the amount of time spent in each time position. Note that we
-cannot simply use \(x(l+1)\) as the value of the clock, because it is possible
-that during the transition between time position \(l\) and \(l+1\), the value of
-the clock may be reset, which would set \(x(l+1)=0\). Our guard only sees the
-pre-transition value of the clock, and thus we must manually add \(\delta(l)\)
-to the value. \(\phi_{10}\) captures the same semantics for variable guards,
-asserting that an active transition with a guard implies that the guard is true
-at that time position. Because variables, unlike clocks, do not progress with
-time, it is sufficient to simply use the value \(var_{v}(l)\) to determine if
-the guard is satisfied.
+\emph{Property $\phi_{9}$} We will first consider the transition guards. Each
+transition can have multiple guards, which consist of two types, clock guards
+and variable guards. Clock guards have the form \(x\ \sim\ c\), where
+\(x \in X\), \(c \in \mathbb{Z}\) and \(\sim \in \{<,>,\leq,\geq\}\). Formula
+\(\phi_9\) asserts that for every clock guard, its associated transition being
+active at time position \(l\) implies that at the instance of transition, the
+relationship \(\sim\) holds between the clock value and the value. Recall that
+if a transition is active at time position \(l\), the transition occurs in the
+instant between time position \(l\) and time position \(l+1\). Therefore, at the
+instance of the transition, the clock does not have the value \(x(l)\), but
+rather \(x(l) + \delta(l)\), delta being the special clock that defines the
+amount of time spent in each time position. Note that we cannot simply use
+\(x(l+1)\) as the value of the clock, because it is possible that during the
+transition between time position \(l\) and \(l+1\), the value of the clock may
+be reset, which would set \(x(l+1)=0\). Our guard only sees the pre-transition
+value of the clock, and thus we must manually add \(\delta(l)\) to the value.
+We use the function $\sigma$ to encode the grammar of the clock constraints. In
+this case we use $\sigma_{\delta}$, which differs only in the fact that $\delta$
+is added to the clock value.
 
-Clock assignments are more straightforward then the clock guards. It is enough
-to require that if a transition is taken at time position \(l\), then in the
-following time position the clock is reset to the desired value. Variable
-assignments however, are more complex. Unlike clock assignments, which reset
-clocks to a constant number in \(\mathbb{Z}^+\), variable assignments can access
-both constant values and the values of other variables, and they may combine
-them using the operators \(\{+,-\}\). To implement this in our bvlogic, we first
-require that if a variable \(v'\) appears in the assignment expression of
-variable \(v\), then the possible values of \(v'\) must be a subset of the
-possible values of \(v\). Recall that \(\overleftarrow{var_v}(l)\) is a bit
-vector of \(\lambda(v)\) bits that contains the value of \(v\) at time position
-\(l\) in two's-complement form. By constraining \(\lambda(v') \leq \lambda(v)\), we prevent
-\(v'\) from having a BitVector of greater length than that of \(v\). We can then
-cast all constants and variables to BitVectors of length \(\lambda(v)\),
-sign-extending shorter values if necessary. This allows us to use the
-standard BitVector addition and subtraction operators to compute the final
-value, which is assigned to \(v\) at time position \(l{+}1\).
+\emph{Property $\phi_{10}$} This property captures the same semantics for
+variable guards, asserting that an active transition with a guard implies that
+the guard is true at that time position. Because variables, unlike clocks, do
+not progress with time, it is sufficient to simply use the value \(var_{v}(l)\)
+to determine if the guard is satisfied. The function $\mu$ is used to encode the
+variable constraint grammar. If the form
+$\overleftarrow{var_{n}(l)}_{[\lambda(n)]} \sim \overleftarrow{var_{n'}(l)}_{[\lambda(n)]}$
+is used and $\lambda(n') < \lambda(n)$, then the BitVector
+$\overleftarrow{var_{n'}(l)}_{[\lambda(n')]}$ is implicitly sign-extended to a
+length of $\lambda(n)$ bits. It is forbidden to use a variable $n'$ such that
+$\lambda(n') > \lambda(n)$.
 
-The last component of a transition to discuss is the state invariant. Although
-invariants are state-specific, not transition-specific, since states are defined
-by the active transitions, it is sufficient to ensure that a transition never
-leads to a state whose invariant would be unsatisfied. \(\phi_{13}\)
-accomplishes this using the notions of strong and weak satisfaction. Explained
-in the original TACK paper, weak satisfaction is a relation where the invariants
-are relaxed so that the relations \(<,>\) are also satisfied with equality. This
-was done to model the fact that at the instant of transition, the transition is
-located in exactly one of the two states, source or destination. This choice can
-be different for each timed automaton and each time position. If the timed
-automaton is not in a state in the instance of transition, then a strict
-inequality can be satisfied with equality at the instance of transition, since
-the automaton is not actually in that state at that instant.
+\emph{Property $\phi_{11} - \phi_{12}$} Clock assignments are more
+straightforward then the clock guards. It is enough to require that if a
+transition is taken at time position \(l\), then in the following time position
+the clock is reset to 0. Variable assignments however, are more complex. Unlike
+clock assignments, variable assignments can access both constant values and the
+values of other variables, and they may combine them using the operators
+\(\{+,-\}\). To implement this in our BitVector logic, we require that if any
+variable \(n'\) appears in the assignment expression of variable \(n\), then
+$\lambda(n') \leq \lambda(n)$, just as in the variable guards. We can then cast
+all constants and variables to BitVectors of length \(\lambda(v)\),
+sign-extending shorter values if necessary. This allows us to use the standard
+BitVector addition and subtraction operators to compute the final value, which
+is assigned to \(v\) at time position \(l{+}1\).
+
+\emph{Property $\phi_{13}$} The last component of the transition to discuss is
+the state invariant. Although invariants are state-specific, not
+transition-specific, since states are defined by the active transitions, it is
+sufficient to ensure that at the moment of transition both the source and
+destination invariants are satisfied, taking into account the value of
+$\overleftarrow{edge_{i}^{RC}}$. Since all invariants are convex, if the
+invariant is satisfied at moment the TA enters the state and at the moment it
+leaves, it is satisfied at all positions in the interval between them. We can
+see that the transition implies one of two statements, one for each possible
+value of $\overleftarrow{edge_{i}^{RC}}$. In addition the invariants of the
+source state are evaluated with $\delta(l)$, while the transitions of the state
+with the open-ended transition are evaluated with the weak satisfaction
+relation.
+
+
+
+%accomplishes this using the
+%notions of strong and weak satisfaction. Explained in the original TACK paper,
+%weak satisfaction is a relation where the invariants are relaxed so that the
+%relations \(<,>\) are also satisfied with equality. This was done to model the
+%fact that at the instant of transition, the transition is located in exactly one
+%of the two states, source or destination. This choice can be different for each
+%timed automaton and each time position. If the timed automaton is not in a state
+%in the instance of transition, then a strict inequality can be satisfied with
+%equality at the instance of transition, since the automaton is not actually in
+%that state at that instant.
 
 \subsection{Sync}\label{constraints-sync}
 \begin{center}
