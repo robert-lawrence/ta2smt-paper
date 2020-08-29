@@ -13,6 +13,7 @@
 \usepackage{amsmath}
 \usepackage{textcomp}
 \usepackage{amssymb}
+\usepackage{amsthm}
 \usepackage{capt-of}
 \usepackage{hyperref}
 \usepackage[margin=1in]{geometry}
@@ -26,6 +27,10 @@
 \newcommand*\ShiftLeft{\ll}
 \newcommand*\ShiftRight{\gg}
 \renewcommand{\arraystretch}{1.0}
+
+\theoremstyle{definition}
+\newtheorem{defn}{Definition}[section]
+
 \setlength{\parskip}{1em}
 \setlength{\abovetopsep}{0.5em}
 %\renewcommand{\baselinestretch}{1.3}
@@ -41,8 +46,8 @@
 
 %\maketitle
 \tableofcontents
-\newpage
 \listoffigures
+\newpage
 \listoftables
 \newpage
 
@@ -264,16 +269,33 @@ by an execution of a network of timed automata.
 
 At a given position in time, the TA network can be described by the currently
 active states, as well as the values of the clocks and integer variables.
+To describe the values of the clocks and variables at different positions in
+time, we introdue `valuations', which accept a clock or variable argument and
+return a value.
+\begin{align*}
+  v : &\ \mathcal{X} \rightarrow \mathbb{R}_{\geq 0} \\
+  v_{var} : &\ Int \rightarrow \mathbb{Z} \\
+\end{align*}
+Each time position has an associated clock and variable valuation.
 Because the execution of a TA is a series of instantaneous state transitions,
 interspersed throughout time, we can represent a TA execution as a series of
 `snapshots' showing these moments of transitions. In order to achieve this
-representation, we use the concept of a trace. A trace consists of an infinite
-sequence of \emph{time positions} $S = \{s_{0}s_{1}s_{2}\ldots\}$. Each time
-position contains the active state of each timed automaton, the current values
-of each clock and variable, the amount of time $\delta$ that will elapse before
-the next position, and the transition to be taken by each timed automaton at the
-next time position. For a given position we will use $l[i]$ and $t[i]$
-to denote the active state and transition of automaton $\mathcal{A}_{i}$.
+representation, we use the concept of a trace.
+ For the time being let us consider a trace $\eta$ to be an infinite sequence
+  \[\eta = (l_{0},v_{0},v_{var,0}),\delta_{0},t_{0},(l_{1},v_{1},v_{var,1}),\delta_{1},t_{1}, \ldots\]
+
+Where $l_{l}[i]$ returns the active state $q \in Q_{i}$ for $i \in [1,N]$, and
+$t_{l}[i]$ returns a transition $t \in T_{i} \cup \sharp$, where $\sharp$ is the
+\emph{null transition}, which signifies that the TA does not perform a discrete
+transition. We can see that the trace is made up of snapshots of the TA in a
+given moment of time $(l,v,v_{var})$, which are connected with a combined
+temporal $\delta$ and discrete $t$ transition step. We can safely require that
+all transitions follow this pattern because two consecutive temporal transitions
+$\delta$ can simply be combined into one whose length is the sum of the two
+original transitions, and two consecutive discrete transitions can be combined
+\textbf{iff} no TA in the network performs a non-null transition in both
+transitions, in which case the trace would be illegal, for the TA would be in
+multiple states in the same time position.
 
 \begin{figure}[h]
   \centering
@@ -287,7 +309,7 @@ in figure \ref{fig:example-big}, which has been given an index of 1. To prevent
 the value of $t[i]$ being undefined at position $0$, the value of $t[i]$
 corresponds to the transition taken in the following time position. However for
 clarity in the traces shown here, the values of $t[1]$ have been shifted to the
-right by one position, so that the active transition is lifted over the position
+right by one position, so that the active transition is placed over the position
 in time where the transition actually occurs. At the top of the trace $l[1]$
 tracks the currently active state of the timed automaton. In this simple trace
 the automaton begins in state $q_{1}$, transitions to $q_{2}$, remains in
@@ -355,30 +377,33 @@ addition of the edge variable. Like the transitions, it is shifted to the right
 by one position for ease of viewing. Notice that when transition $t_{3}$ is
 taken, the edge is left-closed, as is required by the invariant. The value of
 the edge variable is not shown during the null transition, however during a null
-transition either value is equivalent.
-
+transition either value is equivalent. We now revise the notion of a trace to
+include this term.
+\begin{defn} A trace $\eta$ is an infinite sequence
+  \[\eta = (l_{0},v_{0},v_{var,0}),\delta_{0},t_{0},edge_{0}(l_{1},v_{1},v_{var,1}),\delta_{1},t_{1},edge_{1} \ldots\]
+\end{defn}
 
 When using Timed Automata to model real-time systems, a common desire is to
 verify that every valid trace of the system obeys a given constraint, or
 property. Problems of feasibility quickly arise however, due to the infinite
-length of these traces. Bounded Model Checking is a process in which
-timed automata traces of infinite length can be efficiently verified against a
-property. Since TA traces are infinite in
-length, we restrict ourselves to traces of the form
-\(s_0 s_1\ldots s_{l-1}{(s_l s_{l+1}\ldots s_{k-1}s_k)}^\omega\). These
-``lasso-shaped'' traces consist of an initial sequence of states up until
-\(s_{l-1}\), followed by a loop that can be repeated an infinite amount of times
-to form the full trace. Since the beginning of the loop is allowed to occur
-anywhere within the sequence, the only variable is the number of distinct states
-\(k\). Bounded Model Checking refers to checking if a given property is
-satisfied over lasso-shaped traces of up to length \(k\).
-The TA system along with the desired property are converted into a
-format suitable for parsing by a SAT or SMT solver, which is then tasked
-with finding a counterexample to the property. If a counterexample is
-found, then there exists at least one trace that does not satisfy the provided
-property. Otherwise, the property is said to have been verified over the TA
-network up to the bound \(k\), as the solver has shown that no lasso-shaped
-traces of length \(k\) exist that contradict the property.
+length of these traces. Bounded Model Checking is a process in which timed
+automata traces of infinite length can be efficiently verified against a
+property. Since TA traces are infinite in length, we restrict ourselves to
+traces of the form
+\(s_0 s_1\ldots s_{l-1}{(s_l s_{l+1}\ldots s_{k-1}s_k)}^\omega\), where every
+$s = (l,v,v_{var},\delta,t)$. These ``lasso-shaped'' traces consist of an
+initial sequence of states up until \(s_{l-1}\), followed by a loop that can be
+repeated an infinite amount of times to form the full trace. Since the beginning
+of the loop is allowed to occur anywhere within the sequence, the only variable
+is the number of distinct states \(k\). Bounded Model Checking refers to
+checking if a given property is satisfied over lasso-shaped traces of up to
+length \(k\). The TA system along with the desired property are converted into a
+format suitable for parsing by a SAT or SMT solver, which is then tasked with
+finding a counterexample to the property. If a counterexample is found, then
+there exists at least one trace that does not satisfy the provided property.
+Otherwise, the property is said to have been verified over the TA network up to
+the bound \(k\), as the solver has shown that no lasso-shaped traces of length
+\(k\) exist that contradict the property.
 
 \subsection{Constraint LTL Over Clocks}\label{cltloc}
 
@@ -431,30 +456,26 @@ CLTLoc Bounded Model Checking is \aez. We will provide an overview of both
 the TACK encoding of Timed Automata in CLTLoc and the ae2sbvzot translation of
 CLTLoc into BitVector form.
 
+
+Each time position in an infinite trace of a network of timed automata is
+represented as a position in the mono-infinite temporal space of \cltloc. At
+every time position $l[i]$, $t[i]$ and $v_{var}[n]$ return the active state,
+active transition, and value of the variable at the current time position. Each
+function is syntactic sugar for a set of atomic propositions, one for each
+possible value of the function, that are constrained so that only one may
+evaluate to true in each time position. Each $edge_{i}^{RC},\ i \in [1,N]$ is
+encoded as an atomic proposition. TA clocks can be represented directly as
+\cltloc\ clocks.
+
+
 \begin{table}
-  \begin{tabular}{p{0.2\textwidth} p{0.7\textwidth}}
-    \toprule
-    \textbf{Type} & \textbf{Liveness Semantics} \\
-    \midrule
-    Strong transition liveness & Every TA will always transition at some point
-                                 in the future. \\
-    \midrule
-    Weak transition liveness & At least 1 TA will always transition at some
-                               point in the future. \\
-    \bottomrule
-  \end{tabular}
-  \caption{Liveness Semantics}
-  \label{table:liveness-def}
-\end{table}
-
-
-\begin{table}\label{tack-encoding}
   \centering
   % \setlength{\tabcolsep}{4pt}
   \aboverulesep=0ex
   \belowrulesep=0ex
   \renewcommand{\arraystretch}{1.2}
   \caption{TACK Encoding of an Automaton in CLTLoc}
+  \label{tack-encoding}
   \begin{tabular}{c|c|c}
     \toprule
     \(\varphi_{1} := \underset{i \in [1,N]}{\bigwedge} (l[i] = 0)\) &
@@ -478,22 +499,127 @@ CLTLoc into BitVector form.
   \end{tabular}
 \end{table}
 
-Table \ref{tack-encoding} contains the formulas used to encode the Timed Automata into
-CLTLoc. To accomplish this encoding, several auxillary formulas are used.
-\(l[i], i \in [1,N]\) represents the \emph{location} of the TA \(i\) at the
-current time position. Likewise, \(t[i], i \in [1,N]\) represents the currently
-active transition for TA \(i\) at the current time position. Because not every
-TA will transition at each time position, we introduce a \emph{null transition}
-symbol \(\sharp\). Therefore the function \(t[i]\) may return either a
-transition or the symbol \(\sharp\). If transition \(t\)
-is active in a given position \(i\), then the TA is in state \(t_{-}\) at
-position \(i\) and state \(t_{+}\) at position \(i+1\).
+Table \ref{tack-encoding} contains the formulas used to encode the Timed
+Automata into CLTLoc. To accomplish this encoding, several auxillary formulas
+are used. \(l[i], i \in [1,N]\) represents the \emph{location} of the TA \(i\)
+at the current time position. Likewise, \(t[i], i \in [1,N]\) represents the
+currently active transition for TA \(i\) at the current time position. Because
+not every TA will transition at each time position, we introduce a \emph{null
+  transition} symbol \(\sharp\). Therefore the function \(t[i]\) may return
+either a transition or the symbol \(\sharp\). If transition \(t\) is active in a
+given position \(i\), then the TA is in state \(t_{-}\) at position \(i\) and
+state \(t_{+}\) at position \(i+1\).
 
 The first formula constrains each TA to be in the initial state at time 0. For
 each Timed Automaton, the states are represented as natural numbers, with the
 initial state as \(0\). The second formula initializes each variable
 \(n \in Int\) to its initial value, and the third ensures that the invariants of
 each initial state hold in the initial position.
+
+% TODO: clocks?
+
+Formula $\varphi$ defines the semantics for the null transition. If a Timed
+Automaton performs a null transition then at the moment of transition, the state
+invariant must hold both before and after clock resets are applied.
+
+Formula $\varphi$ encodes the discrete transitions. Each must respect the guards
+and assignments of the transitions, the TA must currently be in the source state
+of the transition, and must be in the destination state in the following
+position. $\varphi_{edge}$ encodes the two possible edge states, right and
+left-closed, and ensures that the invariants are satisfied, either weakly or
+strongly depending on the edge type.
+
+The final three formulas capture the sufficient conditions for a discrete
+transition. The active state of a TA my not change, nor may a clock be reset,
+nor may a variable value change without a transition explicitly causing the
+change.
+
+\begin{table}
+  \centering
+  \begin{tabular}{l c}
+    \toprule
+    \textbf{Type} & \textbf{Synchronization Semantics} \\
+    \midrule
+    \multirow{2}{5em}{One-to-one}
+                  & todo \\
+                  & todo2 \\
+    \midrule
+    \multirow{2}{5em}{Broadcast}
+                  & todo \\
+                  & todo2 \\
+    \midrule
+                  & $\varphi_{sync{-}on}$ \\
+                  & $\varphi_{sync{-}on{-}but}$ \\
+                  & $\varphi_{same{-}edge}$ \\
+    \bottomrule
+  \end{tabular}
+  \caption{Encoding of Different Synchronization Types}
+  \label{table:cltloc-sync}
+\end{table}
+
+Table \ref{table:cltloc-sync} contains the synchronization semantics for the two
+supported synchronization types. These synchronization semantics are defined in
+table \ref{table:sync-def}. The formula \emph{sync-on} is true if the automaton
+$i$ performs a transition with the event $\alpha$. \emph{Sync-on-but} is true if
+an automaton not included in the set $S$ performs a sync on $\alpha$. \emph{Same
+edge} is true if the to automatons have the same edge type.
+
+
+
+\begin{table}
+  \centering
+  \begin{tabular}{p{0.2\textwidth} c}
+    \toprule
+    \textbf{Type} & \textbf{Liveness Semantics} \\
+    \midrule
+    Strong transition liveness &
+                                 $\underset{i \in [1,N]}{\land} \mathcal{G}(\mathcal{F}(t[i] \neq \sharp))$
+    \\
+    \midrule
+    Weak transition liveness & $\mathcal{G}(\mathcal{F}(\underset{i \in [1,N]}{\lor} t[i] \neq \sharp))$ \\
+    \midrule
+    Unrestricted & $\top$ \\
+    \bottomrule
+  \end{tabular}
+  \caption{Liveness Semantics}
+  \label{table:liveness-def}
+\end{table}
+
+In addition to the TA and synchronization constraints, TACK includes support for
+an optional \emph{liveness constraint}, termed Strong Transition Liveness, which
+is shown in table \ref{table:liveness-def}. This
+guarantees that every time position, eventually in the future all timed
+automaton in the network will take a non-null transition. Although a weaker
+version termed Weak Transition Liveness is defined in the TACK paper, it is not
+implemented in the TACK tool. It requres that at every position \emph{at least
+  one} timed automaton will eventually perform a non-null transition.
+%todo liveness background?
+
+\begin{table}
+  \centering
+  \begin{tabular}{l c}
+    \toprule
+    \textbf{Type} & \textbf{Edge Semantics} \\
+    \midrule
+    Right-closed & todo \\
+    \midrule
+    Open & todo \\
+    \bottomrule
+  \end{tabular}
+  \caption{Possible Edge Constraints}
+  \label{table:edge-def}
+\end{table}
+
+In addition to liveness, TACK also allows for customization of its edge
+constraints. As we have seen in section \ref{bounded-sat}, the edge variables
+are necessary for defining which state an automaton is located in during the
+instant of transition. However the freedom to choose between two possible edge
+types is often not needed, and adds additional overhead to the solver. To speed
+up problems that do not have invariant edge cases, TACK provides the open to set
+all edge variables to right-closed in every time position. As seen in table
+\ref{table:edge-def}, this is contrasted with the `open' edge semantics, which
+do not place any additional restrictions on the edge variables.
+
 
 \subsection{Bit-Vector Logic}\label{bvlogic}
 A BitVector is an array of binary values, or bits. BitVectors are interpreted
@@ -569,20 +695,9 @@ loop portion of the trace, while the rest of the positions are. The infinite
 trace therefore would begin in position 0, move to position 1, and then repeat
 the infinite sequence of positions \([232323\ldots]\).
 
-Given a formula with a bound of \(k\), \aez\ constructs a BitVector for the
-formula and for each subformula with a length of \(k{+}2\). It adds an extra
-position both at the beginning (bit 0) to represent the initial configuration of
-the system, as well as at the end (bit \(k{+}1\)) to represent the loopback
-position as discussed. Each formula is then represented as a formula over its
-component subformulas based on the rules in table \ref{table:zot-constraints}.
-The first three formulas show the encoding of logical operators \(\neg, \land\),
-and \(\lor\). The rest of the table shows the encoding of the temporal
-operators. Extra care is taken in the definition of \(\mathcal{U}\) to ensure
-that the properties of the lasso are taken into account.
-
-\begin{table}
+\begin{table}[ht]
   \centering
-  \setstretch{0.7}
+  %\setstretch{0.7}
   \caption{\aez\ definition of a proposition \(\varphi\)}
   \begin{tabular}{c c}
     \(\phi\) & Encoding \\
@@ -603,6 +718,37 @@ that the properties of the lasso are taken into account.
   \end{tabular}
   \label{table:zot-constraints}
  \end{table}
+
+Given a formula with a bound of \(k\), \aez\ constructs a BitVector for the
+formula and for each subformula with a length of \(k{+}2\). It adds an extra
+position both at the beginning (bit 0) to represent the initial configuration of
+the system, as well as at the end (bit \(k{+}1\)) to represent the loopback
+position as discussed. Each formula is then represented as a formula over its
+component subformulas based on the rules in table \ref{table:zot-constraints}.
+The first three formulas show the encoding of logical operators \(\neg, \land\),
+and \(\lor\). The rest of the table shows the encoding of the temporal
+operators. Extra care is taken in the definition of \(\mathcal{U}\) to ensure
+that the properties of the lasso are taken into account.
+
+Atomic propositions (including the active states, transitions, and variable
+valuation) are encoded as BitVectors, and form the basic atoms from which more
+complex expressions are built upon. For each state, transition, and possible
+variable assignment (i.e.\ $n = 4$), there is a BitVector defined whose value is
+$1$ if the corresponding state or transition is active, or if the variable
+assignment is true. One limitation of this approach is that arithmetic
+operations over variables cannot be represented. As a result, in this
+implementation, variable guards may only test for equality, and different
+variables cannot be added or subtracted in a variable assignment statement.
+
+Clocks, being real-valued functions, cannot be easily represented in BitVector
+logic. Instead \aez\ takes advantage of SMT-LIB2's support for multiple logics,
+and encodes clocks directly as functions that accept an integer argument,
+representing the time position, and return a real number. For a given clock
+guard a BitVector is constructed to represent the truth value of the clock
+expression. These can then be used to contruct larger expressions using the
+rules shown in table \ref{table:zot-constraints}.
+
+%TODO: clocks & loopback
 
 \section{TA Encoding}\label{encoding}
 
@@ -1088,15 +1234,16 @@ relation.
 \begin{center}
 \begin{tabular}{c}
 Sync Constraints \\
-\(\phi_{14} := \underset{t \in T: t_\epsilon = \alpha!}{\BitAnd} \overleftarrow{trans_t} \Rightarrow (\neg \underset{t' \in \{T \backslash t\}: t'_\epsilon\in \{\alpha!,\alpha\#\}}{\BitOr} \overleftarrow{trans_{t'}}) \land (\underset{t' \in T: t_\epsilon = \alpha?}{\BitOr} \overleftarrow{trans_{t'}})\)
+\(\phi_{14} := \underset{t \in T: t_\epsilon = \alpha!}{\BitAnd} \overleftarrow{trans_t} \Rightarrow (\neg \underset{t'_\epsilon\in \{\alpha!,\alpha\#\}}{\underset{t' \in \{T \backslash t\}: }{\BitOr}} \overleftarrow{trans_{t'}}) \land (\underset{t' \in T: t_\epsilon = \alpha?}{\BitOr} \overleftarrow{trans_{t'}} )\)
   \\
 \midrule
-\(\phi_{15} := \underset{t \in T: t_\epsilon = \alpha?}{\BitAnd} \overleftarrow{trans_t} \Rightarrow (\neg \underset{t' \in \{T\backslash t\}:t_\epsilon = \alpha?}{\BitOr} \overleftarrow{trans_{t'}}) \land (\underset{t' \in T:t_\epsilon = a!}{\BitOr} \overleftarrow{trans_{t'}})\)
+\(\phi_{15} := \underset{t \in T_{i}: t_\epsilon = \alpha?}{\underset{i \in [1,N]}{\BitAnd}} \overleftarrow{trans_t} \Rightarrow (\neg \underset{t_\epsilon = \alpha?}{\underset{t' \in \{T\backslash t\}:}{\BitOr}} \overleftarrow{trans_{t'}}) \land (\underset{t_\epsilon = a!}{\underset{t' \in T_{j}:}{\underset{j \in [1,N]}{\BitOr}}} \overleftarrow{trans_{t'}} \BitAnd (\overleftarrow{edge_{i}^{RC}} \Leftrightarrow \overleftarrow{edge_{j}^{RC}}))\)
   \\
 \midrule
 \(\phi_{16} := \underset{t \in T:t_\epsilon = \alpha\#}{\BitAnd} \overleftarrow{trans_t} \Rightarrow \neg (\underset{t' \in T:t_\epsilon = \alpha\#\land t' \neq t}{\BitOr} \overleftarrow{trans_{t'}}) \) \\
 \midrule
-\(\phi_{17} := \underset{t \in T:t_\epsilon = \alpha@}{\BitAnd} \overleftarrow{trans_t} \Rightarrow (\underset{t' \in T: t_\epsilon = \alpha\#}{\BitOr} \overleftarrow{trans_{t'}}) \) \\
+\(\phi_{17} := \underset{t \in T_{i}:t_\epsilon = \alpha@}{\underset{i \in [1,N]}{\BitAnd}} \overleftarrow{trans_t} \Rightarrow (\underset{t' \in T_{j}: t_\epsilon = \alpha\#}{\underset{j \in [1,N]}{\BitOr}} \overleftarrow{trans_{t'}} \BitAnd (\overleftarrow{edge_{i}^{RC}} \Leftrightarrow \overleftarrow{edge_{j}^{RC}})) \)
+  \\
 \midrule
 \(\phi_{18} := \underset{\alpha \in Act}{\bigwedge}\ \underset{l \in [0,k+2]}{\underset{i \in [1,|\mathcal{A}|]}{\bigwedge}} (\underset{t_\epsilon = \alpha\#}{\underset{t \in T_i:}{\bigvee}} \overleftarrow{trans_t}^{[l]}) \rightarrow \) \\
 \((\underset{j \neq i}{\underset{j \in [1,k]:}{\bigwedge}} (\underset{t'_\epsilon = \alpha@}{\underset{t' \in T_j: }{\bigvee}} \overleftarrow{state_{t'_-}}^{[l]} \land \sigma_{\delta}(l,t'_{\gamma_{c}})  \land \mu(l,t_{\gamma_v})) \rightarrow \underset{t'_\epsilon = \alpha@}{\underset{t' \in T_j:}{\bigvee}} \overleftarrow{trans_{t'}}^{[l]}) \) \\
@@ -1118,7 +1265,7 @@ active, and secondly that there exists at least one active transition with the
 event $\alpha{?}$ (one-to-one receive). The second formula is very similar,
 requiring that when a transition with the event $\alpha{?}$ is active, no other
 transition with the event $\alpha{?}$ may be active, and there must be at least
-one active transition with the event $\alpha{!}$.
+one active transition with the $\alpha{!}$ event that has the same edge.
 
 \emph{Properties $\phi_{16}-\phi_{18}$} Formulas $\phi_{16}$ and $\phi_{17}$ are
 similar to those for one-to-one communication, with modifications for the
@@ -1128,11 +1275,11 @@ transition with the same event may be active. The difference from $\phi_{14}$ is
 that there is no requirement for an active transition labelled with the
 $\alpha@$ (broadcast receive) event. $\phi_{17}$ requres that when a transition
 with the event $\alpha@$ is active, there exists at least one active transition
-with the event $\alpha\#$. Note that multiple transitions are allowed to receive
-the same broadcast signal. The final formula $\phi_{18}$ handles the
-``compulsive'' nature of broadcast synchronization. When there exists an active
-transition with the broadcast send event on a channel $\alpha$, for all other TA
-in the network we require that if there exists a transition
+with the event $\alpha\#$ and the same edge. Note that multiple transitions are
+allowed to receive the same broadcast signal. The final formula $\phi_{18}$
+handles the ``compulsive'' nature of broadcast synchronization. When there
+exists an active transition with the broadcast send event on a channel $\alpha$,
+for all other TA in the network we require that if there exists a transition
 \begin{itemize}
   \item that has the broadcast receive event on channel $\alpha$
   \item whose source state equal to the current state of the TA
@@ -1186,8 +1333,9 @@ Loop Constraints \\
 \end{center}
 
 As mentioned previously, we are only interested in lasso-shaped runs that end in
-a loop. To keep track of the initial position of the loop, we declare the
-variable \(loop\), and constrain it to have a value in the range \([1,k]\).
+a loop. To keep track of the initial position of the loop, we have defined the
+BitVector \(\overleftarrow{loop}\), and constrained it to have a value in the
+range \([1,k]\).
 
 Intuitively, the time position \(k{+}1\) represents the first time position in the
 next iteration of the loop. It is effectively a `copy' of the position
@@ -1235,7 +1383,7 @@ has length \(k+2\), and each bit \(i\) is 1 iff \(i \geq loop\). Using this
 vector, we can determine if a given clock is reset within the loop portion of
 the trace.
 
-\section{Equivalence}\label{equivalence}
+\subsection{Equivalence}\label{equivalence}
 
 Using the definitions presented above, we are now ready to define our TA network
 in BitVector logic as follows:
@@ -1250,10 +1398,10 @@ constraints are identical, as both assign the desired value at time position 0.
 For states our encoding uses the \(\overleftarrow{state_{q}}\) aliases to
 require that the TA begins in the initial state, despite not having state
 BitVectors. Because the state alias is only true when one of the transitions
-whose source is that state is true, the constraint is valid. Our clock
-\(\delta(l)\) ensures that all clocks progress at the same rate, while clock
-resets and variable assignments are only allowed if one of the corresponding
-transitions are active.
+whose source is that state is true (including the state-specific null
+transitions), the constraint is valid. Our clock \(\delta(l)\) ensures that all
+clocks progress at the same rate, while clock resets and variable assignments
+are only allowed if one of the corresponding transitions are active.
 
 As for the transitions, although we have broken up \(\varphi_{7}\) into several
 pieces, the functionality remains the same. We ensure that in order for a
@@ -1263,6 +1411,19 @@ must be enforced, and the invariants of the source and destination state must be
 true at the moment of transition. Like TACK, we allow that at the moment of
 transition, only one of the two invariants must be satisfied, using the concept
 of weak satisfaction to formalize this relaxation.
+
+In addition, our encoding contains improvements over the original TACK+\aez\
+encoding. As mentioned previously, \aez\ contains a limitation regarding integer
+variables - because they are represented as elements of a set, \aez\ can only
+test for equality. This means that contraints of the form $n \sim c$ or
+$n \sim n'$, where $\sim \neq =$ are not supported. Our encoding correctly
+represents the values of the integer variables using a twos-complement encoding,
+and therefore can support the full grammar of variable guards and assignments.
+
+Although the TACK paper describes right-closed, left-closed, and unrestricted
+traces, the implementation currently only supports right-closed traces. We have
+implemented all three options in our encoding, allowing the user to choose which
+one they will use to evaluate their traces.
 
 \section{Evaluation}\label{evaluation}
 In this chapter we present the results of several experimental evaluations of
@@ -1281,6 +1442,7 @@ each with a larger bound on the length of traces considered by TACK. The data
 obtained demonstrates how the running time of each program scales with the size
 of the search space.
 
+%TODO: Grinder
 All tests were performed on a server equipped with an Intel(R) Core(TM) i7-4770
 CPU (3.40 GHz) with 8 cores, 16 GB of RAM and Debian Linux (version 4.19).
 
@@ -1291,12 +1453,12 @@ The Fischer benchmark models a protocol for ensuring exclusive access to a
 shared common resource that can be requested by multiple processes. The protocol
 uses global variables, integrated into the guards and assignment statements of
 the timed automata, to control access. Each timed automaton in the network has a
-'critical state', and the protocol guarantees that only one timed automaton can
+`critical state', and the protocol guarantees that only one timed automaton can
 be in its critical state at a time.
 
 To be more specific, there is a shared variable \(id\), which can take any
 integer value in the range \([0,n]\), where \(n\) is the number of processes in the
-protocol. Each process begins in an 'idle' state \(a\), and in order to reach the
+protocol. Each process begins in an `idle' state \(a\), and in order to reach the
 critical section \(cs\), a process must first check to see that the critical
 section is unoccupied (\(id=0\)), at which point the process writes its own id to
 the shared variable (while entering state \(b\)) and then performs a second
@@ -1317,15 +1479,15 @@ Fischer protocol through several different MITL properties for verification.
 These properties will be explained below.
 
 \begin{align}
-&Property 1 &&:=&& \mathcal{G}_{[0,\infty)}\ (p_1.b \Rightarrow \mathcal{F}_{[0,\infty)}p_1.c) &\nonumber \\
-&Property 2 &&:=&& \mathcal{G}_{[0,\infty)}\ (p_1.b \Rightarrow \mathcal{F}_{[0,3]}p_1.c) &\nonumber \\
-&Property 3 &&:=&& \mathcal{G}_{[0,\infty)}\ (p_1.b \Rightarrow \mathcal{F}_{(0,3)}p_1.cs) &\nonumber \\
-&Property 4 &&:=&& \mathcal{G}_{[0,\infty)}\ (p_1.b \Rightarrow \mathcal{F}_{(0,3)}p_1.c) &\nonumber \\
-&Property 5 &&:=&& \mathcal{G}_{[0,\infty)}\ (p_1.b \Rightarrow \mathcal{F}_{[0,3]}p_1.cs) &\nonumber \\
-&Property 6 &&:=&& \mathcal{G}_{[0,\infty)}\ \neg (\underset{i=1:n-1}{\lor} (p_i.cs \land \underset{j=i+1:n}{\lor} p_j.cs ))  &\nonumber
+&Live 1 &&:=&& \mathcal{G}_{[0,\infty)}\ (p_1.b \Rightarrow \mathcal{F}_{[0,\infty)}p_1.c) &\nonumber \\
+&Live 2 &&:=&& \mathcal{G}_{[0,\infty)}\ (p_1.b \Rightarrow \mathcal{F}_{[0,3]}p_1.c) &\nonumber \\
+&Live 3 &&:=&& \mathcal{G}_{[0,\infty)}\ (p_1.b \Rightarrow \mathcal{F}_{(0,3)}p_1.cs) &\nonumber \\
+&Live 4 &&:=&& \mathcal{G}_{[0,\infty)}\ (p_1.b \Rightarrow \mathcal{F}_{(0,3)}p_1.c) &\nonumber \\
+&Live 5 &&:=&& \mathcal{G}_{[0,\infty)}\ (p_1.b \Rightarrow \mathcal{F}_{[0,3]}p_1.cs) &\nonumber \\
+&Live 6 &&:=&& \mathcal{G}_{[0,\infty)}\ \neg (\underset{i=1:n-1}{\lor} (p_i.cs \land \underset{j=i+1:n}{\lor} p_j.cs ))  &\nonumber
 \end{align}
 
-Property 1 requires that once process one enters state \(b\), it always
+Liveness property 1 requires that once process one enters state \(b\), it always
 transitions to state \(c\). Property 2 is similar, however it contains the
 additional constraint that process 1 must complete the transition to state \(c\)
 in at most 3 seconds. Property 3 has a similar time bound, but requires that
@@ -1421,12 +1583,71 @@ at the same time.
 \end{table}
 
 \subsection{CSMA/CD}\label{evaluation-csma}
+
+The CSMA/CD (Carrier Sense Multiple Access/Collision Detection) protocol is a
+well known protocol for allowing multiple agents to share a communication
+channel, and was popularized by its inclusion in the Ethernet standard. The
+protocol includes 1 process to manage a shared communication bus, as well as a
+number of processes that wish to obtain exclusive access to the bus in order to
+send a message. When two processes attempt to send at the same time, the bus
+process detects the collision and uses the broadcast synchronization primitive
+to force the processes to wait a randomized amount of time before attempting to
+communicate again. While an agent is sending over the bus, the bus process can
+send a `busy' signal to the other agents, in order to simulate the agents
+listening to the bus and detecting a communication in-progress.
+
+\begin{align*}
+  \text{\textbf{live-csma}} := & \mathcal{G}_{(0,\infty)}(P1.begin\_send \rightarrow (\neg collision\_after\_deadline)) \\
+  P1.begin\_send := & (\neg P1.send) \land (P1.send\ \mathcal{U}_{(0,inf)} \top) \\
+  P1.collision\_after\_deadline := & \mathcal{G}_{(0,52]}(P1.send \land (P1.send\ \mathcal{U}_{ [0,inf) } (P1.send \land P2.send))) \\
+\end{align*}
+This protocol was tested to ensure that a collision is always detected before a
+certain amount of time has passed.
+The property \textbf{live-csma} asserts that after process 1 has been sending
+for 52 units of time, process 2 cannot begin sending until process 1 has finished.
+
 \subsection{Token Ring}\label{evaluation-token}
 
-The Token Ring protocol models a ring of processes that pass a token between
-themselves, along with a process that models the ring itself.
+The Token Ring protocol models a ring of agents that pass a token between
+themselves, along with a process that models the ring itself. The token moves in
+either direction along the ring (the ring process controls the token). The
+agents may choose to return the token in either a synchronous or asynchronous
+manner. In both cases channel-based synchronization is used to coordinate
+ownership of the token.
+\begin{align*}
+  \text{\textbf{live-token}} := & \mathcal{G}_{{0,\infty}} (\neg ((ST_{1}.zsync \lor ST_{1}.zasync \lor ST_{1}.ysync \lor ST_{1}.yasync) \land \\
+  & (ST_{2}.zsync \lor ST_{2}.zasync \lor ST_{2}.ysync \lor ST_{2}.yasync))) \\
+\end{align*}
+This property asserts that agents 1 and 2 never simultaneously synchronize with
+the token.
+
 
 \section{Conclusion}\label{conclusion}
+
+We have presented a novel approach for encoding networks of Timed Automata
+directly into BitVector logic, suitable for solving by state of the art SMT
+solvers. Building off of the work begun with the development of the TACK solver,
+we retain TACK's approach of encoding MITL properties to be verified over the
+network, while creating a more efficient model for the encoding of the network
+itself. Rather than encode the TA network into \cltloc, we directly translate
+the network terms and constraints into a combination of BitVector and
+real-valued logic, written in the standard SMT-LIB2 language.
+
+In addition to re-implementing the translation of timed automata networks, we
+have corrected several difficiencies in the original TACK implementation, and
+the tool now supports the full variable constraint and variable assignment
+grammars. In addition our implementation allows users to choose the desired
+liveness and edge semantics at runtime. We are proud to present the
+implementation of this algorithm, which is available for download at
+\url{https://github.com/fm-polimi/TACK} alongside the original TACK encoding, as
+free software.
+
+Empirical testing has revealed that our approach exibits significant speedups
+across several benchmarks when compared to the previous encoding. The results
+seem to indicate that our approach is better suited to exploring models with
+larger bounds, as the time necessary to solver larger and larger bounds grows
+more slowly when comparised with \aez.
+
 
 \newpage
 
