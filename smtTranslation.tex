@@ -597,13 +597,13 @@ implemented in the TACK tool. It requres that at every position \emph{at least
 
 \begin{table}
   \centering
-  \begin{tabular}{l c}
+  \begin{tabular}{l c c}
     \toprule
-    \textbf{Type} & \textbf{Edge Semantics} \\
+    \textbf{Type} &\quad\quad\quad\quad & \textbf{Edge Semantics} \\
     \midrule
-    Right-closed & todo \\
+    Right-closed & & $\mathcal{G} \underset{i \in [1,N]}{\land} edge^{RC}[i]$ \\
     \midrule
-    Open & todo \\
+    Open & & $\top$ \\
     \bottomrule
   \end{tabular}
   \caption{Possible Edge Constraints}
@@ -1316,7 +1316,8 @@ $\alpha@$.
 \begin{tabular}{c}
 Loop Constraints \\
 \midrule
-\(\phi_{19} := \underset{i \in [1,N]}{\bigwedge}\ \underset{j \in [1,\lceil\log_2 |\mathcal{T}_i|\rceil]}{\bigwedge} \overleftarrow{tb_{i,j}}^{[k+1]} = \overleftarrow{tb_{i,j}}^{[loop]}\) \\
+\(\phi_{19} := \underset{i \in [1,N]}{\bigwedge}\ (\overleftarrow{edge_{i}^{RC}}^{[k{+}1]} = \overleftarrow{edge_{i}^{RC}}^{[loop]}) \land \underset{j \in [1,\lceil\log_2 |\mathcal{T}_i|\rceil]}{\bigwedge} \overleftarrow{tb_{i,j}}^{[k+1]} = \overleftarrow{tb_{i,j}}^{[loop]}\)
+  \\
 \midrule
 \(\phi_{20} := \underset{n \in Int}{\bigwedge}\ \underset{j \in [1,\lambda(n)]}{\bigwedge} \overleftarrow{vb_{n,j}}^{[k+1]} = \overleftarrow{vb_{n,j}}^{[loop]}\) \\
 \midrule
@@ -1342,15 +1343,16 @@ next iteration of the loop. It is effectively a `copy' of the position
 \(loop\), however we add it as a distinct position so that we may capture
 the semantics of the transition between time position \(k\) and time position
 \(loop\). We therefore must introduce constraints to ensure that these two
-positions are in fact equivalent. This requires that the active state and
-transition of each timed automata at position \(k+1\) be equal to that at
-position \(loop\). Formula \(\phi_{19}\) captures this by requiring that
-for each Timed Automaton, each transition bit \(tb_{i,j}\) contains the same value
-at time positions \(k+1\) and \(loop\). Similarly, formula \(\phi_{20}\)
-enforces the same requirement for each bounded integer variable.
+positions are in fact equivalent.
 
+\emph{Propositions $\phi_{19}-\phi_{20}$} For transitions, edges and variables
+this is very straightforward. We simply require that in the $loop$ and $k{+}1$
+positions that the active transitions, edge type, and variables have identical
+values.
+
+\emph{Propisitions $\phi_{21}-\phi_{23}$}
 It is tempting to encode the clock constraints in a similar manner, requiring
-that \(x(k+1) = x(loop)\) for each clock. However prior work by Kindermann[ref]
+that \(x(k+1) = x(loop)\) for each clock. However prior work by Kindermann\cite{todo}
 has shown that this constraint is not complete, as it excludes valid
 lasso-shaped runs. To remedy this problem we use the requirements suggested by
 Kindermann. To begin, for each clock \(x\) we define the non-negative integer
@@ -1370,6 +1372,7 @@ encoding by considering the relationship between values of different clocks,
 asserting that the relationship between two clock values \(\{<,>,=\}\) is
 preserved.
 
+\emph{Property $\phi_{24}$}
 Unfortunately, there is one more consideration we must make in this section. The
 culprit are so-called ``Zeno traces'', named because while they are lasso-shaped
 runs with an infinite number of transitions, their execution happens in finite
@@ -1383,7 +1386,7 @@ has length \(k+2\), and each bit \(i\) is 1 iff \(i \geq loop\). Using this
 vector, we can determine if a given clock is reset within the loop portion of
 the trace.
 
-\subsection{Equivalence}\label{equivalence}
+\subsection{Equivalence and Improvements}\label{equivalence}
 
 Using the definitions presented above, we are now ready to define our TA network
 in BitVector logic as follows:
@@ -1411,6 +1414,22 @@ must be enforced, and the invariants of the source and destination state must be
 true at the moment of transition. Like TACK, we allow that at the moment of
 transition, only one of the two invariants must be satisfied, using the concept
 of weak satisfaction to formalize this relaxation.
+
+Similarly, the original TACK encoding contains three contraints that assert that
+the values of the active states, as well as the values of the
+variables and clocks, can only be changed if there is an active transition that
+modifies them. For states, this is accomplished with $\phi_{5}$, which requires
+that the active state in the following position be equal to the value of the
+destination state of the active transiton. Unlike in the original encoding, we
+have one null transition for each position, so we do not need to consider the
+null transitions as a special case. Therefore the for the state to change, there
+must be a non-null transition to enable the state change. For variables,
+$\phi_{8}$ asserts that when no transition explicitly changes the value of a
+variable, its value must remain the same. $\phi_{7}$ asserts the same for the
+clocks.
+
+%todo varphi_6 and r_1
+% also need to explain 2-clock encoding in prelim section
 
 In addition, our encoding contains improvements over the original TACK+\aez\
 encoding. As mentioned previously, \aez\ contains a limitation regarding integer
@@ -1647,6 +1666,9 @@ across several benchmarks when compared to the previous encoding. The results
 seem to indicate that our approach is better suited to exploring models with
 larger bounds, as the time necessary to solver larger and larger bounds grows
 more slowly when comparised with \aez.
+One potential future research direction is in similarly improving the encoding
+of the MITL property files into BitVector logic. As seen in the TACK results,
+our tool [wait until results are finalized before finishing]
 
 
 \newpage
