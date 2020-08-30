@@ -51,6 +51,24 @@
 \listoftables
 \newpage
 
+\clearpage
+\section{Abstract}\label{abstract}
+Timed Automata (TA) is a de facto modelling standard for systems with
+time-sensitive properties. A common task is to verify if a given network of TA
+satisfy a given property. We build upon the TA solver TACK, which supports
+properties expressed in the rich Metric Interval Temporal Logic (MITL), and
+encodes both the TA network and property to be verified into a variant of Linear
+Temporal Logic (LTL), Constraint LTL over clocks (CLTLoc). The produced \cltloc\
+formula can then be solved by tools such as Zot, which transform \cltloc\
+properties into SMT-LIB2, a standardized SMT solver language.
+
+We present a novel method that preserves TACK's encoding of MITL properties,
+while presenting a novel encoding of the Timed Automata network directly into a
+logic suitable for solving by SMT solvers. The encoding of Timed Automata
+presented is based on a hybrid BitVector logic and logic over real-valued
+variables. This is supported by the industry-standard SMT-LIB2, which is
+implemented in many state-of-the-art SMT solvers, including Microsoft's Z3.
+
 \section{Introduction}\label{introduction}
 \iffalse
 Timed Automata are a commonly used representation for modeling the behavior of
@@ -403,15 +421,23 @@ finding a counterexample to the property. If a counterexample is found, then
 there exists at least one trace that does not satisfy the provided property.
 Otherwise, the property is said to have been verified over the TA network up to
 the bound \(k\), as the solver has shown that no lasso-shaped traces of length
-\(k\) exist that contradict the property.
+\(k\) exist that contradict the property. Although restricting ourselves to only
+lasso-shaped traces may seem to be a severe limitation, it has been shown that
+for a given TA network $\mathcal{A}$, there exists a limit $K$ such that if a
+counterexample for a given property exists, there exists a lasso-shaped
+counterexample of length no more than $K$\cite{biere99}.
 
 \subsection{Constraint LTL Over Clocks}\label{cltloc}
 
-\cltloc\ is a temporal logic that allows for the construction of formulas
-defined over atomic propositions, clocks, and arithmetic variables. A clock is a
-variable over \(\mathbb{R}_{\geq 0}\) whose value changes between LTL positions
-to model the passage of time. Like clocks in timed automata, clocks can be
-reset back to zero.
+Constraint LTL is an extention of linear temporal logic allowing formulas over a
+given constraint system\cite{demri07}. \cltloc\ is a constraint LTL where the
+constraint system consists of clocks defined over the positive real numbers.
+This allows for the construction of formulas defined over atomic propositions,
+clocks, and arithmetic variables. A clock is a variable over
+\(\mathbb{R}_{\geq 0}\) whose value changes between LTL positions to model the
+passage of time. Like clocks in timed automata, clocks can be reset back to
+zero. In addition \cltloc\ has been extended to support expressions over
+arithmetical variables\cite{marconi16}.
 
 A formula in \cltloc\ consists of atomic propositions, clock formulas, and
 formulas over integer variables, which are combined using the standard LTL
@@ -424,21 +450,51 @@ of variables. An example would be the expression \(b + c = 7\); \(b,c \in Int\).
 
 Let \(X\) be a finite set of clocks and \(Int\) be a finite set of integer
 variables. \cltloc\ formulas are defined as follows:
-\[\phi := a \BitOr x \sim c \BitOr \exp \sim \exp \BitOr \mathcal{X}(n) \sim \exp \BitOr \phi \land \phi \BitOr \neg \phi \BitOr \mathcal{X}\phi \BitOr \phi \mathcal{U} \phi \]
-Where \(a \in AP\), \(x \in X\), \(c \in \mathbb{N}\), \(n \in Int\), and
-\(exp\) are arithmetic formulas over integer variables. As mentioned before,
-clocks are special dense variables over \(\mathbb{R}_{\geq 0}\) that `progress'
-between different LTL positions. To be more specific, each clock must either
-increment between two adjacent time positions, or it must be reset. To maintain
-a consistent view of time, we introduce
-\(\delta: \mathbb{N} \rightarrow \mathbb{R}_{>0}\), which measures the amount of
-time that elapses between two adjacent time positions. For a given clock
-`valuation' \(\sigma: \mathbb{N} \times X \rightarrow \mathbb{R}_{\geq 0}\),
-each clock \(x \in X\) must either obey the equivalence
-\(\sigma(i,x) + \delta(i) = \sigma(i+1,x)\), or is reset, i.e.\
-\(\sigma(i+1,x) = 0\). This ensures that all clocks progress at the same rate,
+\[\phi := p \BitOr x \sim c \BitOr \exp_{1} \sim \exp_{2} \BitOr \mathcal{X}(n) \sim \exp \BitOr \phi \land \phi \BitOr \neg \phi \BitOr \mathcal{X}\phi \BitOr \phi \mathcal{U} \phi \]
+Where \(a \in AP\), \(x \in X\), \(c \in \mathbb{N}\), \(n \in Int\),
+$\sim \in \{<,=\} $ and \(exp\) are arithmetic formulas over integer variables
+and integers (defined in Section \ref{timed-automata}).
+
+As mentioned before, clocks are special dense variables over
+\(\mathbb{R}_{\geq 0}\) that `progress' between different LTL positions. To be
+more specific, each clock must either increment between two adjacent time
+positions, or it must be reset. To maintain a consistent view of time, we
+introduce \(\delta: \mathbb{N} \rightarrow \mathbb{R}_{>0}\), which measures the
+amount of time that elapses between two adjacent time positions. For a given
+clock `valuation'
+\(\sigma: \mathbb{N} \times X \rightarrow \mathbb{R}_{\geq 0}\), each clock
+\(x \in X\) must either obey the equivalence
+\(\sigma(l,x) + \delta(l) = \sigma(l+1,x)\), or is reset, i.e.\
+\(\sigma(l+1,x) = 0\). This ensures that all clocks progress at the same rate,
 and we can use \(\delta(t)\) to calculate the amount of time elapsed between any
 two positions.
+
+We also define vairables via the assignment function
+$\iota : \mathbb{N} \times Int \rightarrow \mathbb{Z}$ that assigns a value to
+each variable $n \in Int$ at every time position in $\mathbb{N}$. The
+arithmetical expressions $\exp$ can now be evauated at a time position $l$ by
+replacing every occurance of an integer variable $n$ with $\iota(l,n)$.
+
+A \cltloc\ interpretation is the triple $(\pi, \sigma, \iota)$, where
+$\phi: \mathbb{N} \rightarrow \wp(AP)$ maps time positions to the set of atomic
+propositions that evaluate to true, and $\sigma$ and $\iota$ are the clock and
+variable valuations. A \cltloc\ formula $\phi$ evaluated at time position $l$ is
+defined as follows:
+\begin{align*}
+  &(\pi,\sigma,\iota),l \vDash x \sim c && \Leftrightarrow && \sigma(l,x) \sim c \\
+  &(\pi,\sigma,\iota),l \vDash \exp_{1} \sim \exp_{2} && \Leftrightarrow && \exp_{1}(\iota,l) \sim \exp_{2}(\iota,l) \\
+  &(\pi,\sigma,\iota),l \vDash \mathcal{X}(n) \sim \exp && \Leftrightarrow && \iota(l{+}1,n) \sim \exp(\iota,l) \\
+  &(\pi,\sigma,\iota),l \vDash p && \Leftrightarrow && p \in \pi(l) \\
+  &(\pi,\sigma,\iota),l \vDash \neg \phi && \Leftrightarrow && \neg ((\pi,\sigma,\iota),l \vDash \phi) \\
+  &(\pi,\sigma,\iota),l \vDash \phi_{1} \land \phi_{2} && \Leftrightarrow &&((\pi,\sigma,\iota),l \vDash \phi_{1}) \land ((\pi,\sigma,\iota),l \vDash \phi_{2}) \\
+  &(\pi,\sigma,\iota),l \vDash \mathcal{X}(\phi) && \Leftrightarrow && (\pi,\sigma,\iota),l{+}1 \vDash \phi \\
+  &(\pi,\sigma,\iota),l \vDash \phi_{1} \mathcal{U} \phi_{2} && \Leftrightarrow &&((\pi,\sigma,\iota),l \vDash \phi_{2}) \lor \\
+  &&&&& \bigg(((\pi,\sigma,\iota),l \vDash \phi_{1}) \land ((\pi,\sigma,\iota),l{+}1 \vDash \phi_{1} \mathcal{U} \phi_{2}) \bigg) \\
+\end{align*}
+A \cltloc\ formula$\phi$ is said to be \emph{satisfiable} if an interpretation
+$(\pi,\sigma,\iota)$ exists such that $(\pi,\sigma,\iota),0 \vDash \phi$. This
+is often shortened to simply $(\pi,\sigma,\iota) \vDash \phi$.
+
 
 \subsection{TACK \cltloc\ Translation}\label{prelim-tack}
 
@@ -459,13 +515,13 @@ CLTLoc into BitVector form.
 
 Each time position in an infinite trace of a network of timed automata is
 represented as a position in the mono-infinite temporal space of \cltloc. At
-every time position $l[i]$, $t[i]$ and $v_{var}[n]$ return the active state,
-active transition, and value of the variable at the current time position. Each
-function is syntactic sugar for a set of atomic propositions, one for each
-possible value of the function, that are constrained so that only one may
-evaluate to true in each time position. Each $edge_{i}^{RC},\ i \in [1,N]$ is
-encoded as an atomic proposition. TA clocks can be represented directly as
-\cltloc\ clocks.
+every time position $l[i]$ and $t[i]$ return the active state and active
+transition at the current time position. Each function is syntactic sugar for a
+set of atomic propositions, one for each possible value of the function, that
+are constrained so that only one may evaluate to true in each time position.
+Each $edge_{i}^{RC},\ i \in [1,N]$ is encoded as an atomic proposition. TA
+clocks and variables can be represented directly as \cltloc\ clocks and
+variables.
 
 
 \begin{table}
@@ -536,21 +592,21 @@ change.
 
 \begin{table}
   \centering
-  \begin{tabular}{l c}
+  \begin{tabular}{l c c}
     \toprule
-    \textbf{Type} & \textbf{Synchronization Semantics} \\
+    \textbf{Type} && \textbf{Synchronization Semantics} \\
     \midrule
     \multirow{2}{5em}{One-to-one}
-                  & todo \\
-                  & todo2 \\
+                  & $v_{1} :=$ & \\
+                  & $v_{2} :=$ & \\
     \midrule
     \multirow{2}{5em}{Broadcast}
-                  & todo \\
-                  & todo2 \\
+                  & $v_{1} :=$ & \\
+                  & $v_{2} :=$ & \\
     \midrule
-                  & $\varphi_{sync{-}on}$ \\
-                  & $\varphi_{sync{-}on{-}but}$ \\
-                  & $\varphi_{same{-}edge}$ \\
+                  $\varphi_{sync{-}on}$&$:=$ &\\
+                  $\varphi_{sync{-}on{-}but}$&$:=$ &\\
+                  $\varphi_{same{-}edge}$&$:=$ &\\
     \bottomrule
   \end{tabular}
   \caption{Encoding of Different Synchronization Types}
@@ -689,7 +745,7 @@ the trace, \aez\ defines two special BitVectors, \(\overleftarrow{lpos}\) and
 of 2, meaning that bit 2 is the first position in the loop. Looking at the table
 we can see that the columns for bits 2 and 4 are in bold, to represent that 4,
 being the `loopback' position, is a copy of position 2, and therefore all
-formulas have identical values in these positions. Meanwhile
+formulas are constrainted to have identical values in these positions. Meanwhile
 \(\overleftarrow{inloop}\) highlights that bits 0 and 1 are \textbf{not} in the
 loop portion of the trace, while the rest of the positions are. The infinite
 trace therefore would begin in position 0, move to position 1, and then repeat
@@ -746,7 +802,7 @@ and encodes clocks directly as functions that accept an integer argument,
 representing the time position, and return a real number. For a given clock
 guard a BitVector is constructed to represent the truth value of the clock
 expression. These can then be used to contruct larger expressions using the
-rules shown in table \ref{table:zot-constraints}.
+rules shown in Table~\ref{table:zot-constraints}.
 
 %TODO: clocks & loopback
 
@@ -1043,6 +1099,8 @@ throughout the trace.
   \\
 \bottomrule
 \end{tabular}
+\caption{Initialization and Progression Constraints for a network of timed automata}
+\label{table:constraints-init}
 \end{table}
 
 \emph{Properties \(\phi_{1} - \phi_{3}\)}\ The initialization constraints are
@@ -1112,7 +1170,7 @@ variable \(n\) containing all transitions that assign a value to the variable.
 When none of these transitions are active, formula \(\phi_8\) ensures that the
 value of \(n\) remains unchanged.
 
-\subsection{Transitions}\label{constraints-trans}
+\subsection{Transitions}
 
 \begin{table}
 \centering
@@ -1146,6 +1204,8 @@ value of \(n\) remains unchanged.
 \(\phi_{trans} :=\) & \(\phi_{9} \land \phi_{10} \land \phi_{11} \land \phi_{12} \land \phi_{13}\) \\
 \bottomrule
 \end{tabular}
+\caption{Transition Constraints for a network of timed automata}
+\label{table:constraints-trans}
 \end{table}
 
 As a quick review, transitions consist of a source and destination state, a
@@ -1230,8 +1290,9 @@ relation.
 %equality at the instance of transition, since the automaton is not actually in
 %that state at that instant.
 
-\subsection{Sync}\label{constraints-sync}
-\begin{center}
+\subsection{Sync}
+\begin{table}
+  \centering
 \begin{tabular}{c}
 Sync Constraints \\
 \(\phi_{14} := \underset{t \in T: t_\epsilon = \alpha!}{\BitAnd} \overleftarrow{trans_t} \Rightarrow (\neg \underset{t'_\epsilon\in \{\alpha!,\alpha\#\}}{\underset{t' \in \{T \backslash t\}: }{\BitOr}} \overleftarrow{trans_{t'}}) \land (\underset{t' \in T: t_\epsilon = \alpha?}{\BitOr} \overleftarrow{trans_{t'}} )\)
@@ -1251,7 +1312,9 @@ Sync Constraints \\
 \(\phi_{sync} := (\phi_{14} \BitAnd \phi_{15} \BitAnd \phi_{16} \BitAnd \phi_{17} =\ \BitNeg \overleftarrow{0} ) \land \phi_{18} \)
 
 \end{tabular}
-\end{center}
+\caption{Synchronization Constraints for a network of timed automata}
+\label{table:constraints-sync}
+\end{table}
 
 The synchronization constraints capture the semantics defined in table
 \ref{table:sync-def}. Formula $\phi_{14}$ and $\phi_{15}$ capture the contraints
@@ -1312,7 +1375,7 @@ $\alpha@$.
 
 \subsection{Loop Constraints}\label{constraints-loop}
 
-\begin{center}
+\begin{table}
 \begin{tabular}{c}
 Loop Constraints \\
 \midrule
@@ -1331,7 +1394,9 @@ Loop Constraints \\
 \midrule
 \(\phi_{loop} := \phi_{19} \land \phi_{20} \land \phi_{21} \land \phi_{22} \land \phi_{23} \land \phi_{24}\)
 \end{tabular}
-\end{center}
+\caption{Loop Constraints for a network of timed automata}
+\label{table:constraints-loop}
+\end{table}
 
 As mentioned previously, we are only interested in lasso-shaped runs that end in
 a loop. To keep track of the initial position of the loop, we have defined the
@@ -1352,7 +1417,7 @@ values.
 
 \emph{Propisitions $\phi_{21}-\phi_{23}$}
 It is tempting to encode the clock constraints in a similar manner, requiring
-that \(x(k+1) = x(loop)\) for each clock. However prior work by Kindermann\cite{todo}
+that \(x(k+1) = x(loop)\) for each clock. However prior work by Kindermann\cite{kindermann12}
 has shown that this constraint is not complete, as it excludes valid
 lasso-shaped runs. To remedy this problem we use the requirements suggested by
 Kindermann. To begin, for each clock \(x\) we define the non-negative integer
@@ -1430,6 +1495,9 @@ clocks.
 
 %todo varphi_6 and r_1
 % also need to explain 2-clock encoding in prelim section
+Our new encoding also respects the same loop constraints as \aez\, including the
+extended clock constraints described in  Section~\ref{constraints-loop}
+necessary to represent all possible lasso-shaped traces.
 
 In addition, our encoding contains improvements over the original TACK+\aez\
 encoding. As mentioned previously, \aez\ contains a limitation regarding integer
@@ -1461,9 +1529,8 @@ each with a larger bound on the length of traces considered by TACK. The data
 obtained demonstrates how the running time of each program scales with the size
 of the search space.
 
-%TODO: Grinder
-All tests were performed on a server equipped with an Intel(R) Core(TM) i7-4770
-CPU (3.40 GHz) with 8 cores, 16 GB of RAM and Debian Linux (version 4.19).
+All tests were performed on a server equipped with an AMD EPYC 7551 CPU (2.5
+GHz) with 2 32-core sockets, 500 GB of RAM and Debian Linux (version 4.19).
 
 
 
