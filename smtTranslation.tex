@@ -1,6 +1,6 @@
 % Created 2020-08-20 gio 13:13
 % Intended LaTeX compiler: pdflatex
-\documentclass[a4paper,12pt]{report}
+\documentclass[a4paper,11pt]{report}
 \usepackage[utf8]{inputenc}
 \usepackage[T1]{fontenc}
 \usepackage{graphicx}
@@ -56,23 +56,58 @@
 
 \clearpage
 \chapter{Abstract}\label{abstract}
-Timed Automata (TA) is a de facto modelling standard for systems with
+Timed Automata (TA) are a de facto modelling standard for systems with
 time-sensitive properties. A common task is to verify if a given network of TA
-satisfy a given property. We build upon the TA solver TACK, which supports
+satisfy a given property for every possible execution of the network. These
+questions lend themselves to being expressed in Linear Temporal Logics (LTLs),
+which allows for expressions over atomic propositions that are defined over time
+positions in $\mathbb{N}$. We build upon the TA solver TACK, which supports
 properties expressed in the rich Metric Interval Temporal Logic (MITL), and
 encodes both the TA network and property to be verified into a variant of Linear
-Temporal Logic (LTL), Constraint LTL over clocks (CLTLoc). The produced \cltloc\
+Temporal Logic, Constraint LTL over clocks (\cltloc). The produced \cltloc\
 formula can then be solved by tools such as Zot, which transform \cltloc\
-properties into SMT-LIB2, a standardized SMT solver language.
+properties into SMT-LIB2, a standardized SMT solver language with support for
+BitVector and real-valued logics.
 
-We present a novel method that preserves TACK's encoding of MITL properties,
-while presenting a novel encoding of the Timed Automata network directly into a
-logic suitable for solving by SMT solvers. The encoding of Timed Automata
-presented is based on a hybrid BitVector logic and logic over real-valued
-variables. This is supported by the industry-standard SMT-LIB2, which is
-implemented in many state-of-the-art SMT solvers, including Microsoft's Z3.
+We present a novel method that preserves TACK's encoding of MITL properties
+while encoding the Timed Automata network directly into SMT-LIB2, making use of
+both the BitVector logic and the logic of real-valued functions. Our primary
+targeted SMT solver is Microsoft's Z3, which supports many standardized formats,
+including SMT-LIB2 and has strong support for several SMT logics.
 
 \chapter{Introduction}\label{introduction}
+
+Timed Automata (TA) are a popular tool for modelling time-sensitive systems. By
+combining the transition semantics of finite automata with real-valued clocks,
+they are of great theoretical and practical interest for representing time-bound
+processes and applications. They have found common use in the domain of model
+checking, where system representations are evaluated against a given property of
+interest. Various tools and encoding languages exist for a variety of
+applications and use cases. These include the current de facto standard
+Uppaal\cite{todo}, as well as RED and $\text{MITL}_{0,\infty}$BMC.
+
+
+TACK is a bounded model checker for networks of timed automata developed by
+Menghi et al\cite{tack20}. Properties to be verified are specified in Metric Interval
+Temporal Logic (MITL), and are converted along with the TA network into \cltloc,
+a variant of Contraint Linear Temporal Logic supporting real-valued clocks.
+MITL and \cltloc\ are rich logics that allow for continuous-time
+semantics using traces, a form of timed words, to represent the
+execution of the networks of TA.
+
+
+Our contribution is a novel encoding of the TA network which does not use
+\cltloc\ as an intermediate step, instead directly transforming the network
+semantics into a hybrid BitVector representation. This approach has the
+advantage of being tailor-made for TA networks, while the previous approach
+relied on the general-purpose \cltloc\ converter \aez. However rather than just
+re-create the existing encoding in a new language, we have corrected several
+deficiencies in the original TACK encoding, and have added additional features
+to make TACK more useful for users. In addition we have exploited opportunities
+to more efficiently encode TA contructs, noticibly eliminating the need for
+BitVectors to track the active state of the TA, instead relying on the active
+transition to carry this information.
+
 \iffalse
 Timed Automata are a commonly used representation for modeling the behavior of
 systems with real-time semantics.
@@ -94,6 +129,9 @@ network of timed automata into the SMT-LIB format, skipping the intermediate
 CLTLoc representation. While CLTLoc is an elegant expressive language, there is
 a significant overhead in
 \fi
+
+\chapter{State of the Art}\label{stateoftheart}
+
 \chapter{Preliminaries}\label{prelims}
 \section{Timed Automata}\label{timed-automata}
 
@@ -892,15 +930,36 @@ region-based clock constraints suggested by Kindermann. Two clock valuations are
 said to be in the same region if at both positions $loop$ and $k{+}1$:
 \begin{itemize}
   \item Each clock $x$ is either greater than the maximum value compared against
-    $x$ in a clock guard in both positions ($\max(x)$) or
+    $x$ in a clock guard in both positions ($\lfloor x \rfloor > \max(x)$) or
     $\lfloor x(loop) \rfloor = \lfloor x(k{+}1) \rfloor$
-  \item If $x < \max(x)$, the formula $x(l) - \lfloor x(l) \rfloor = 0$ must have
-    the same value in both $loop$ and $k{+}1$
-  \item For every pair of clocks $x,x'$, the formula $frac(x(l)) < frac(x'(l))$
-  must have the same value in both positions, where $frac$ is the fractional
-  part of the clock's value.
+  \item If $\lfloor x \rfloor \leq \max(x)$, the formula
+    $x(l) - \lfloor x(l) \rfloor = 0$ must have the same value in both $loop$
+    and $k{+}1$
+  \item For every pair of clocks $x,x'$, if the floor of both clocks are less
+    than their maximum values, then the formula
+    $frac(x(l)) < frac(x'(l))$ must have the same value in positions $loop$ and
+    $k{+}1$, where $frac$ is the fractional part of the clock's value.
 \end{itemize}
+These conditions are sufficient to ensure that the clock valuation in each
+position belongs to the same region, a concept expanded on in Kindermann's
+work\cite{kindermann12}. This allows \aez to represent loops where the elapsed
+time of each loop iteration is constrained to be less than the elapsed time of
+the previous iteration. Although a lasso with a fixed amount of time per-loop
+iteration does not exist, there exists infinite series of loop iterations, each
+with a decreasing elapsed time, that nonetheless have a diverging sum, and thus
+represent infinite traces.
 
+Since the time per-loop iteration is no longer fixed, another constraint is
+required to ensure that no ``Zeno-shaped'' traces are allowed. In Zeno traces,
+the time elasped in the infinite trace sums to a finite number. These cases are
+considered pathological and to exclude them, it has been
+proven\cite{kindermann12} that it is sufficient to require that in the loop
+section of the trace, that every clock is either
+\begin{itemize}
+  \item Reset at least once during the loop
+  \item or has a value greater than $max(x)$ in the final loop position.
+\end{itemize}
+This concludes the \aez\ encoding of a \cltloc\ formula.
 
 \chapter{TA Encoding}\label{encoding}
 
@@ -1529,19 +1588,14 @@ neither do. Finally, \(\phi_{23}\) completes the region encoding by considering
 the relationship between values of different clocks, asserting that the
 relationship between two clock values \(\{<,>,=\}\) is preserved.
 
-\emph{Property $\phi_{24}$}
-Unfortunately, there is one more consideration we must make in this section. The
-culprit are so-called ``Zeno traces'', named because while they are lasso-shaped
-runs with an infinite number of transitions, their execution happens in finite
-time. Time in these traces is said to ``slow down'', because often each successive
-loop of the lasso executes in a smaller amount of time than the loop before.
-Because these represent unrealistic scenarios, they are often excluded from
-consideration in many TA models. It is sufficient to require that every clock is
-either reset within the loop, or has a value greater than \(max(x)\) at position
-\(k\), which is shown in \(\phi_{24}\). The vector \(\overleftarrow{inloop}\)
-has length \(k+2\), and each bit \(i\) is 1 iff \(i \geq loop\). Using this
-vector, we can determine if a given clock is reset within the loop portion of
-the trace.
+\emph{Property $\phi_{24}$} As mentioned in Section~\ref{zot-encoding}, we must
+exclude the ``Zeno traces'' from consideration, because while they are infinite
+traces, they execute in a finite amount of time. We encode the same constraint
+used in \aez. It is sufficient to require that every clock is either reset
+within the loop, or has a value greater than \(max(x)\) at position \(k\), which
+is shown in \(\phi_{24}\). The vector \(\overleftarrow{inloop}\) has length
+\(k+2\), and each bit \(i\) is 1 iff \(i \geq loop\). Using this vector, we can
+determine if a given clock is reset within the loop portion of the trace.
 
 \section{Equivalence and Improvements}\label{equivalence}
 
@@ -1573,23 +1627,19 @@ transition, only one of the two invariants must be satisfied, using the concept
 of weak satisfaction to formalize this relaxation.
 
 Similarly, the original TACK encoding contains three contraints that assert that
-the values of the active states, as well as the values of the
-variables and clocks, can only be changed if there is an active transition that
-modifies them. For states, this is accomplished with $\phi_{5}$, which requires
-that the active state in the following position be equal to the value of the
-destination state of the active transiton. Unlike in the original encoding, we
-have one null transition for each position, so we do not need to consider the
-null transitions as a special case. Therefore the for the state to change, there
-must be a non-null transition to enable the state change. For variables,
-$\phi_{8}$ asserts that when no transition explicitly changes the value of a
-variable, its value must remain the same. $\phi_{7}$ asserts the same for the
-clocks.
-
-%todo varphi_6 and r_1
-% also need to explain 2-clock encoding in prelim section
-Our new encoding also respects the same loop constraints as \aez\, including the
-extended clock constraints described in  Section~\ref{constraints-loop}
-necessary to represent all possible lasso-shaped traces.
+the values of the active states, as well as the values of the variables and
+clocks, can only be changed if there is an active transition that modifies them.
+For states, this is accomplished with $\phi_{5}$, which requires that the active
+state in the following position be equal to the value of the destination state
+of the active transiton. Unlike in the original encoding, we have one null
+transition for each position, so we do not need to consider the null transitions
+as a special case. Therefore the for the state to change, there must be a
+non-null transition to enable the state change. For variables, $\phi_{8}$
+asserts that when no transition explicitly changes the value of a variable, its
+value must remain the same. $\phi_{7}$ asserts the same for the clocks. Our new
+encoding also respects the same loop constraints as \aez\, including the
+extended clock constraints described in Section~\ref{constraints-loop} necessary
+to represent all possible lasso-shaped traces.
 
 In addition, our encoding contains improvements over the original TACK+\aez\
 encoding. As mentioned previously, \aez\ contains a limitation regarding integer
@@ -1598,6 +1648,22 @@ test for equality. This means that contraints of the form $n \sim c$ or
 $n \sim n'$, where $\sim \neq =$ are not supported. Our encoding correctly
 represents the values of the integer variables using a twos-complement encoding,
 and therefore can support the full grammar of variable guards and assignments.
+Another deficiency in the original TACK implementation was a previously unknown
+error in the encoding of broadcast synchronization symbols, which were added to
+the TACK \cltloc\ encoding recently. While the \cltloc\ encoding of broadcast
+signals is still a work in progress, our experimental evaluation adds confidence
+that our ta2smt encoding correctly handles these signals.
+
+%A further innovation added is the ability to represent finite traces in addition
+%to lasso-shaped traces. All that is needed to support these traces is a simple
+%change to the ta2smt encoding. One new term $loopex$ (short for `loop executed')
+%is added to the encoding as a function that takes no arguments and returns a
+%boolean value. We then redefine the encoding of the constraints as follows:
+%\[\phi_{network} := \phi_{init} \land \phi_{trans} \land \phi_{sync} \land (loopex \rightarrow \phi_{loop})\]
+%When loopex is false, the loop constraints are disabled, and time position
+%$k{+}1$ is no longer a copy of the loop position. The traces found are therefore
+%not infinite, but finite sequences of length $k{+}2$. This feature can also be
+%enabled or disabled by the user.
 
 Although the TACK paper describes right-closed, left-closed, and unrestricted
 traces, the implementation currently only supports right-closed traces. We have
@@ -1627,7 +1693,7 @@ time of each program scales with the size of the search space.
 All tests were performed on a server equipped with an AMD EPYC 7551 CPU (2.5
 GHz) with 2 32-core sockets, 500 GB of RAM and Debian Linux (version 4.19). It
 should be noted that the SMT solver is unusual among modern programs in that it
-is a highly CPU-bould application. Although our tests were run on a large server
+is a highly CPU-bound application. Although our tests were run on a large server
 with (at the time of writing!) an unusually high amount of both processors and
 RAM, the z3 solver is a single threaded application, and typically uses less
 than a gigabyte of RAM while running. Therefore we believe that very similar
@@ -2047,26 +2113,51 @@ we retain TACK's approach of encoding MITL properties to be verified over the
 network, while creating a more efficient model for the encoding of the network
 itself. Rather than encode the TA network into \cltloc, we directly translate
 the network terms and constraints into a combination of BitVector and
-real-valued logic, written in the standard SMT-LIB2 language.
+real-valued logic, written in the standard SMT-LIB2 language. One of the
+original motivations for using \cltloc\ as an intermediate representation in
+TACK was to create a common language that was both feasible to translate into
+SMT form and expressive enough to easily support the encoding of additional
+features. We have strived to make our encoding modular and easily accessable so
+that future additions will not be hampered by the ``low-level'' nature of our
+encoding.
 
 In addition to re-implementing the translation of timed automata networks, we
 have corrected several difficiencies in the original TACK implementation, and
 the tool now supports the full variable constraint and variable assignment
 grammars. In addition our implementation allows users to choose the desired
-liveness and edge semantics at runtime. We are proud to present the
-implementation of this algorithm, which is available for download at
-\url{https://github.com/fm-polimi/TACK} alongside the original TACK encoding, as
-free software.
+liveness and edge semantics at runtime. Furthermore our encoding eliminates the
+unnecessary state BitVectors, creating a smaller search space for the SMT
+solver. We are proud to present the implementation of this algorithm, which is
+available for download at \url{https://github.com/fm-polimi/TACK} alongside the
+original TACK encoding, as free software.
 
 Empirical testing has revealed that our approach exibits significant speedups
 across several benchmarks when compared to the previous encoding. The results
 seem to indicate that our approach is better suited to exploring models with
 larger bounds, as the time necessary to solver larger and larger bounds grows
-more slowly when comparised with \aez.
+more slowly when comparised with the \cltloc\ encoding.
+
+\section{Future Work}
+
 One potential future research direction is in similarly improving the encoding
 of the MITL property files into BitVector logic. As seen in the TACK results,
-our tool [wait until results are finalized before finishing]
+the speedup achieved by our tool was weakest when the MITL property was the
+largest, namely during the tests of Fischer liveness property six. Another
+benefit to this reimplementation would be the potential inclusion of finite
+traces (albeit with restrictions on the properties supported). This can already
+be supported in the TA encoding by disabling the loop constraints, however
+changes to the MITL encoding would be necessry to make this extention useful.
 
+Another potential feature that could be more easily added is support for
+automatically verifying that bounded integer variables are never assigned a
+value outside of their bounds. Currently our BitVector implementation simply
+allows variables to overflow, considering the burden of verifying the bounds to
+fall on the user. However it would be relatively straightforward to increase the
+size of the variable BitVectors so that an illegal assignment would no longer
+overflow, and to then create a custom MITL property that asserts that the
+variable never leaves its given bounds. Users could then check to see if their
+bounds were in fact correct, and receive a trace showing the violation if one
+existed.
 
 \newpage
 
