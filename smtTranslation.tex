@@ -4,7 +4,7 @@
 \usepackage[utf8]{inputenc}
 \usepackage[T1]{fontenc}
 \usepackage{graphicx}
-\graphicspath{ {./images/} }
+\graphicspath{{./images/}}
 \usepackage{grffile}
 \usepackage{longtable}
 \usepackage{wrapfig}
@@ -30,24 +30,20 @@
 \newcommand*\cmark{\small\Checkmark}
 \newcommand*{\xmark}{\small\XSolidBrush}
 \renewcommand{\arraystretch}{1.0}
+\mathchardef\mhyphen="2D % Define a "math hyphen"
 
 \theoremstyle{definition}
 \newtheorem{defn}{Definition}[section]
 
 \setlength{\parskip}{1em}
 \setlength{\abovetopsep}{0.5em}
-%\renewcommand{\baselinestretch}{1.3}
-\setstretch{1.4}
+\setstretch{1.2}
 \newcommand{\cltloc}{CLTLoc}
 \newcommand{\aez}{ae2sbvzot}
-%\author{Robert Smith}
-%\date{\today}
-%\title{SMT Translation}
 \begin{document}
 \title{Improved Verification of Networks of Timed Automata}
   \input{./frontpage/frontpage.tex}
 
-%\maketitle
 \tableofcontents
 \listoffigures
 \newpage
@@ -56,7 +52,7 @@
 
 \clearpage
 \chapter{Abstract}\label{abstract}
-Timed Automata (TA) are a de facto modelling standard for systems with
+Timed Automata (TA) are a de facto modeling standard for systems with
 time-sensitive properties. A common task is to verify if a given network of TA
 satisfy a given property for every possible execution of the network. These
 questions lend themselves to being expressed in Linear Temporal Logics (LTLs),
@@ -73,28 +69,67 @@ We present a novel method that preserves TACK's encoding of MITL properties
 while encoding the Timed Automata network directly into SMT-LIB2, making use of
 both the BitVector logic and the logic of real-valued functions. Our primary
 targeted SMT solver is Microsoft's Z3, which supports many standardized formats,
-including SMT-LIB2 and has strong support for several SMT logics.
+including SMT-LIB2 and has strong support for several SMT logics. We introduce
+several optimizations that allow us to significantly outperform the \cltloc\
+encoding, and correct definciencies in the original encoding.
+
+\chapter{Sommario}\label{sommario}
+
+Gli Automi temporizzati (TA) sono uno standard di modellazione de facto per
+sistemi con proprietà sensibili al tempo. Un compito comune è quello di
+verificare se una data rete di TA soddisfare una data proprietà per ogni
+possibile esecuzione della rete. Questi Le domande si prestano ad essere
+espresse in Logiche temporali lineari (LTL), che permette espressioni su
+proposizioni atomiche definite nel tempo posizioni in $\mathbb{N}$. Ci basiamo
+sul TA solver TACK, che supporta proprietà espresse nella ricca logica temporale
+di intervallo metrico (MITL), e codifica sia la rete TA che la proprietà da
+verificare in una variante di Linear Temporal Logic, Constraint LTL over clocks
+(CLTLoc). Il CLTLoc prodotto formula può quindi essere risolto con strumenti
+come Zot, che trasformano CLTLoc proprietà in SMT-LIB2, un linguaggio solutore
+SMT standardizzato con supporto per BitVector e logiche reali.
+
+Vi presentiamo un nuovo metodo che conserva la codifica TACK delle proprietà
+MITL durante la codifica della rete di Automata temporizzata direttamente in
+SMT-LIB2, utilizzando sia la logica BitVector che la logica delle funzioni a
+valore reale. Il nostro principale Il risolutore SMT mirato è lo Z3 di
+Microsoft, che supporta molti formati standardizzati, compreso SMT-LIB2 e ha un
+forte supporto per diverse logiche SMT. Vi presentiamo diverse ottimizzazioni
+che ci permettono di sovraperformare in modo significativo il CLTLoc codifica, e
+correggere le carenze nella codifica originale.
 
 \chapter{Introduction}\label{introduction}
 
-Timed Automata (TA) are a popular tool for modelling time-sensitive systems. By
-combining the transition semantics of finite automata with real-valued clocks,
-they are of great theoretical and practical interest for representing time-bound
-processes and applications. They have found common use in the domain of model
-checking, where system representations are evaluated against a given property of
-interest. Various tools and encoding languages exist for a variety of
-applications and use cases. These include the current de facto standard
-Uppaal\cite{todo}, as well as RED and $\text{MITL}_{0,\infty}$BMC.
+Timed Automata\cite{alur94} (TA) are a popular tool for modeling time-sensitive
+systems. By combining the transition semantics of finite automata with
+real-valued clocks, they are of great theoretical and practical interest for
+representing time-bound processes and applications. They have found common use
+in the domain of model checking, where system representations are evaluated
+against a given property of interest. Various tools and encoding languages exist
+for a variety of applications and use cases. These include the current de facto
+standard Uppaal\cite{larsen97}, as well as RED and
+$\text{MITL}_{0,\infty}$BMC\cite{kindermann13}.
+
+Model Checking refers to a verification technique for solving properties of
+state transition systems. A wide variety of industrial applications, including
+circuit design, control systems, and program verification lend themselves to
+this representation. In the model checking process, the system is exhaustively
+searched to see if the given property is valid. For \emph{invariant} properties,
+the property holds if every reachable state in the system satisfies the
+property, and thus the model checker attempts to find a counterexample to
+falsify the property. Conversely, a \emph{reachability} property asserts that
+there exists at least one reachable state in which the given property holds, and
+the model checker proves the property by finding that such a reachable state
+exists. A reachability property can be solved by asserting its negation as an
+invariant property (and vice versa).
 
 
 TACK is a bounded model checker for networks of timed automata developed by
-Menghi et al\cite{tack20}. Properties to be verified are specified in Metric Interval
-Temporal Logic (MITL), and are converted along with the TA network into \cltloc,
-a variant of Contraint Linear Temporal Logic supporting real-valued clocks.
-MITL and \cltloc\ are rich logics that allow for continuous-time
-semantics using traces, a form of timed words, to represent the
-execution of the networks of TA.
-
+Menghi et al\cite{tack20}. Properties to be verified are specified in Metric
+Interval Temporal Logic (MITL), and are converted along with the TA network into
+\cltloc, a variant of Contraint Linear Temporal Logic supporting real-valued
+clocks. MITL and \cltloc\ are rich logics that allow for continuous-time
+semantics using traces, a form of timed words, to represent the execution of the
+networks of TA.
 
 Our contribution is a novel encoding of the TA network which does not use
 \cltloc\ as an intermediate step, instead directly transforming the network
@@ -108,29 +143,64 @@ to more efficiently encode TA contructs, noticibly eliminating the need for
 BitVectors to track the active state of the TA, instead relying on the active
 transition to carry this information.
 
-\iffalse
-Timed Automata are a commonly used representation for modeling the behavior of
-systems with real-time semantics.
-
-
-Current examples of TA bounded model checkers include XX, YY, and de facto
-standard Uppaal. TACK is a tool focused on allowing for the expression of TA
-properties in Metric Interval Temporal Logic, a rich \ldots{}
-
-TACK translates both the TA and the property to be verified into CLTLoc.
-Constraint Linear Temporal Logic (over clocks) is a variant of
-
-Zot
-
-Sbvzot is a very successful solver which takes advantage of bit vector logic\ldots{}
-
-To further improve the performance of TACK, we wish to directly translate the
-network of timed automata into the SMT-LIB format, skipping the intermediate
-CLTLoc representation. While CLTLoc is an elegant expressive language, there is
-a significant overhead in
-\fi
-
 \chapter{State of the Art}\label{stateoftheart}
+
+
+For many years, model checking was performed using Binary Decision Diagrams
+(BDDs)\cite{bryant86}, which offer many time- and space-complexity advantages
+over explicit state enumeration\cite{burch92}. However to efficiently handle
+larger state spaces, BDDs have been largely abondoned in favor of bounded model
+checking techniques. A representative example is NuSMV\cite{cimatti02}, which
+was originally designed to use BDDs but has since been rewritten to use
+SAT-based bounded model checking. Using the strength of modern-day SAT and SMT
+solvers, bounded model checking encodes the semantics of the state transition
+system into SAT or SMT form, and then tasks the solver with finding a valid
+assignment of states to time positions starting from a given initial state such
+that the desired reachability property is true (resp.\ false for invariant
+properties). Because such solvers require finite state spaces, the number of
+time positions considered is limited by a bound $k$, hence the name bounded
+model checking. In addition to finding finite traces, this model has also been
+applied to finding traces of infinite length that can be represented in finite
+space, often through the use of an infinite loop through a finite number of
+states.
+
+To represent state systems with real-time properties, Timed Automata have
+emerged as a de facto standard\cite{alur94}. At their core, timed automata are
+finite state machines that are enriched with real-valued clocks that track the
+passage of time. These clocks can then be incorporated into transition guards
+and state invariants to control and synchronize automata. Unfortunately while
+Timed Automata have had great success at modeling real-time systems, they have
+not been useful for representing the properties to be verified, and in fact it
+has been shown that verification using TA to represent properties is
+undecidable\cite{alur94}. As a result various temporal logics have been
+developed by different solvers to represent the properties to be evaluated.
+
+Uppaal\cite{larsen97} is a de facto standard for model checking systems of timed
+automata. Uppaal supports a subset Timed Computation Tree Logic (TCTL), an
+extention of the widely known Computation Tree Logic (CTL) with real-time
+properties. The CTL family of logics uses the expressive tree-view of future
+positions, and as such can represent a wide range of universality and existance
+statements not possible in Linear Temporal Logics.
+
+In addition to the work done with branching-time logics, there has been interest
+in the expressive power of Metric Temporal Logic (MTL), a branch of Linear
+Temporal Logic (LTL) with Interval constraints on the `until' operator. While
+powerful, standard MTL properties are undecidable in general for infinite
+traces\cite{bouyer09}. To make MTL tractable, the subset MITL was proposed in
+1991\cite{Alur91thebenefits}, which offers decidable continuous semantics for
+TAs. Examples of MITL solvers include a tool developed by Kindermann et al.\
+\cite{kindermann13}, which relies on a further subset $\text{MITL}_{0,\infty}$
+for property validation. Another is TACK, which was developed by Menghi et
+al.\cite{tack20} and has implemented a bounded model checker for infinite traces
+over the full MITL logic. To improve the speed of the verification proess, TACK
+encodes the TA and property to be verified into BitVector logic, which is
+supported by the standardized SMT-LIB2 language.\cite{baresi15,baresi16} To
+avoid the incompleteness of the naive lasso encoding shown by
+Kindermann\cite{kindermann12}, both tools use a region-based encoding of the
+clock values. This is paired with a ``non-Zeno'' requirement, so that the
+infinite traces span an infinite amount of time. In the following chapter we
+will summarize the background and work accomplished in the TACK solver, before
+then presenting our contribution to the TACK verification tool.
 
 \chapter{Preliminaries}\label{prelims}
 \section{Timed Automata}\label{timed-automata}
@@ -167,7 +237,7 @@ visualize important concepts.
   \label{fig:example-blank}
 \end{figure}
 
-As we can see in figure \ref{fig:example-blank}, Timed Automata have many
+As we can see in Figure~\ref{fig:example-blank}, Timed Automata have many
 similarities with Finite State Machines and other automata. For a given
 automaton $\mathcal{A}_{i}$, the example TA consists of a finite set of states
 $Q_{i} = \{q_{1},q_{2},q_{3}\}$, and a finite set of transitions
@@ -196,7 +266,7 @@ have to be explicitly modified by the TA.
 \end{figure}
 
 We can now show how these values are used and manipulated by a timed automaton.
-Figure \ref{fig:example-big} shows the same example TA modified with transition
+Figure~\ref{fig:example-big} shows the same example TA modified with transition
 guards, transition assignments, and state invariants. Transition guards are
 conditions over either clocks or variables that prevent the associated
 transition from being taken when they are not satisfied. As an example,
@@ -236,9 +306,9 @@ the actions to describe the type of synchronization desired.
                 synchronization event $\alpha\#$, every other TA
                 $\mathcal{A}_{j}$ must not simultaneously take a transition with
                 the same event, and must either simultaneously take a transition
-                labelled with $\alpha@$, or there must not exist a transition
+                labelled with $\alpha @$, or there must not exist a transition
                 $t' \in \mathcal{A}_{j}$ such that $t_{-}$ is the currently
-                active state, $\alpha@$ is the synchronization event, and the
+                active state, $\alpha @$ is the synchronization event, and the
                 clock and variable guards of $t'$ are satisfied.
     \\
     \midrule
@@ -247,7 +317,7 @@ the actions to describe the type of synchronization desired.
   \label{table:sync-def}
 \end{table}
 
-As shown in table \ref{table:sync-def}, two types of synchronization are
+As shown in Table~\ref{table:sync-def}, two types of synchronization are
 defined. The first type is one-to-one synchronization, which has two associated
 operators, one signifying one-to-one `send' (${!}$), and the second for
 one-to-one receiving (${?}$). A transition labelled with $\alpha{!}$, for some
@@ -363,8 +433,8 @@ multiple states in the same time position.
   \label{fig:trace-min}
 \end{figure}
 
-In figure \ref{fig:trace-min} we can see a trace of the Timed Automaton defined
-in figure \ref{fig:example-big}, which has been given an index of 1. To prevent
+In Figure~\ref{fig:trace-min} we can see a trace of the Timed Automaton defined
+in Figure~\ref{fig:example-big}, which has been given an index of 1. To prevent
 the value of $t[i]$ being undefined at position $0$, the value of $t[i]$
 corresponds to the transition taken in the following time position. However for
 clarity in the traces shown here, the values of $t[1]$ have been shifted to the
@@ -390,7 +460,7 @@ $x$ to zero, and that the trace capture the values of clocks and variables
   \label{fig:trace-delta}
 \end{figure}
 
-Figure \ref{fig:trace-delta} shows how we can compute the value of clock $x$ at
+Figure~\ref{fig:trace-delta} shows how we can compute the value of clock $x$ at
 the moment of the transition, before the reset is applied. By combining the
 values of $x$ and $\delta$, we obtain the value of $x$ that is used to determine
 if the clock guard of transition $t_{2}$ is satisfied. We see that $x$ has a
@@ -399,23 +469,25 @@ value of 6, which satisfies the guard $x>5$.
 Notice in the above trace the value of clock $x$ during the transition from
 state $q_{2}$ to state $q_{3}$. State $q_{2}$ has an invariant requiring that
 the value of clock $x$ be strictly less than $2$, however at the moment of
-transition $x(2) + \delta(2) = 2$. Is this trace therefore illegal? This raises an
-interesting question: at the moment of transition, what is the active state?
+transition $x(2) + \delta(2) = 2$. Is this trace therefore illegal? This raises
+an interesting question: at the moment of transition, what is the active state?
 Possible answers could include the source state, the destination, both, or
-neither. Different models of Timed Automata implement this
-differently\cite{TODO-give-example}. In our model, the TA is always in exactly
-one state at every instant in time. If at the moment of transition the TA
-remains in the source state, the transition is said to be ``right-closed'' or
-equivalently ``left-open'', because the interval of time that the TA spends in
-\(t_{-}\) ends in a closed interval, while the inteval of time that the TA
-spends in \(t_{+}\) begins in an open interval. Conversely if the TA is located
-in the destination state at the moment of transition, we say that it is
-``left-closed'', which also implies that it is right-open. Returning to our
-example trace, if the timed automaton is not in state $q_{2}$ in the instance of
-transition, then the strict inequality in the state invariant can be satisfied
-with equality at the instance of transition, since the automaton is not actually
-in that state at that final moment. To formalize this notion we introduce the
-weak clock relation $\sim_{w}$, which is defined as follows:
+neither. Different models of Timed Automata implement this differently. Some,
+like Uppaal\cite{larsen97} implement so called ``super-dense'' time semantics,
+in which the TA may be in multiple states in the same time instance. In our
+model, the TA is always in exactly one state at every instant in time. If at the
+moment of transition the TA remains in the source state, the transition is said
+to be ``right-closed'' or equivalently ``left-open'', because the interval of
+time that the TA spends in \(t_{-}\) ends in a closed interval, while the
+inteval of time that the TA spends in \(t_{+}\) begins in an open interval.
+Conversely if the TA is located in the destination state at the moment of
+transition, we say that it is ``left-closed'', which also implies that it is
+right-open. Returning to our example trace, if the timed automaton is not in
+state $q_{2}$ in the instance of transition, then the strict inequality in the
+state invariant can be satisfied with equality at the instance of transition,
+since the automaton is not actually in that state at that final moment. To
+formalize this notion we introduce the weak clock relation $\sim_{w}$, which is
+defined as follows:
 \begin{align*}
   x \sim_{w} c  \iff & (x \sim c\ \lor\ x = c) \ \ \sim \in \{<,>,\leq,\geq\} \\
   x =_{w} c  \iff & false
@@ -631,51 +703,57 @@ transition. The active state of a TA my not change, nor may a clock be reset,
 nor may a variable value change without a transition explicitly causing the
 change.
 
-\begin{table}
+\begin{table}[ht]
   \centering
+  \renewcommand{\arraystretch}{1.5}
   \begin{tabular}{l c c}
     \toprule
-    \textbf{Type} && \textbf{Synchronization Semantics} \\
+    \textbf{Type} && \textbf{Synchronization Encoding} \\
     \midrule
     \multirow{2}{5em}{One-to-one}
-                  & $v_{1} :=$ & \\
-                  & $v_{2} :=$ & \\
+                  & $v_{1} :=$ &
+                                 $\underset{t \in T_{i}| t_{\epsilon} = \alpha!}{\underset{i \in [1,N]}{\land}} \Bigg( t[i] = t \rightarrow \underset{j \neq i}{\underset{j \in [1,N],}{\lor}} \Bigg( \genfrac{}{}{0pt}{0}{\genfrac{}{}{0pt}{0}{\varphi_{sync{\mhyphen}on}(j,\alpha?) \land \neg \varphi_{sync{\mhyphen}on{\mhyphen}but}(\{i,j\},\alpha?)}{\land}}{\varphi_{same{\mhyphen}edge}(i,j)} \Bigg) \Bigg)$
+    \\
+                  & $v_{2} :=$ &
+                                 $\underset{t \in T_{i}| t_{\epsilon} = \alpha?}{\underset{i \in [1,N]}{\land}} \Bigg( t[i] = t \rightarrow \underset{j \neq i}{ \underset{j \in [1,N],}{\lor}}( \varphi_{sync{\mhyphen}on}(j,\alpha!) \land \neg \varphi_{sync{\mhyphen}on{\mhyphen}but}(\{i,j\}, \alpha!) ) \Bigg)$
+    \\
     \midrule
     \multirow{2}{5em}{Broadcast}
-                  & $v_{1} :=$ & \\
-                  & $v_{2} :=$ & \\
+                  & $v_{1} :=$ & $\genfrac{}{}{0pt}{0}{\genfrac{}{}{0pt}{0}{\underset{t \in T_{i}|t_{\epsilon} = \alpha \#}{\underset{i \in [1,N]}{\bigwedge}} (t[i] = t \rightarrow (\neg \varphi_{sync{\mhyphen}on{\mhyphen}but}(\{i\},\alpha \#)))}{\land}}{\underset{t \in T_{i}|t_{\epsilon}=\alpha \#}{\underset{i \in [1,N]}{\bigwedge}} \bigg( t[i]=t \rightarrow \bigg( \underset{j \neq i}{\underset{h \in [1,N]}{\bigwedge}} \bigg( \genfrac{}{}{0pt}{0}{\genfrac{}{}{0pt}{0}{\varphi_{sync{\mhyphen}on}(j,\alpha @) \land \varphi_{same{\mhyphen}edge}(i,j)}{\lor}}{\big( \underset{t_{\epsilon}' = \alpha @}{\underset{t' \in T_{i'},}{\bigwedge}} (\mathcal{X}(\neg \phi_{t_{\gamma_{c}}'}) \lor \neg \phi_{t_{\gamma_{v}}'} \lor l[j] \neq {t'}_{-}) \big)} \bigg) \bigg) \bigg)}$
+    \\
+                  & $v_{2} :=$ & $\underset{t \in T_{i}|t_{\epsilon} = \alpha @}{\underset{i \in [1,N]}{\land}} (t[i] = t \rightarrow \varphi_{sync{\mhyphen}on{\mhyphen}but}(\{i\},\alpha\#))$\\
     \midrule
-                  $\varphi_{sync{-}on}$&$:=$ &\\
-                  $\varphi_{sync{-}on{-}but}$&$:=$ &\\
-                  $\varphi_{same{-}edge}$&$:=$ &\\
+                  $\varphi_{sync{\mhyphen}on}$&$(j,\alpha):=$ &$\underset{t \in T_{i} | t_{\epsilon} = \alpha}{\bigvee} (t[i] = t)$\\
+                  $\varphi_{sync{\mhyphen}on{\mhyphen}but}$&$(S,\alpha):=$ & $\underset{g \in \{i|i \in [1,N]\}\backslash S}{\bigvee} \varphi_{sync{\mhyphen}on}(h,\alpha)$\\
+                  $\varphi_{same{\mhyphen}edge}$&$(i,j):=$ & $\mathcal{X}(edge^{RC}[i] \leftrightarrow edge^{RC}[j])$\\
     \bottomrule
   \end{tabular}
   \caption{Encoding of Different Synchronization Types}
   \label{table:cltloc-sync}
 \end{table}
 
-Table~\ref{table:cltloc-sync} contains the synchronization semantics for the two
-supported synchronization types. These synchronization semantics are defined in
+Table~\ref{table:cltloc-sync} contains the encodings for the two supported
+synchronization types. These synchronization semantics are defined in
 Table~\ref{table:sync-def}. The formula \emph{sync-on} is true if the automaton
 $i$ performs a transition with the event $\alpha$. \emph{Sync-on-but} is true if
-an automaton not included in the set $S$ performs a sync on $\alpha$. \emph{Same
-edge} is true if the to automatons have the same edge type.
+an automaton not included in the set $S$ performs a sync on $\alpha$.
+\emph{Same-edge} is true if the two automatons have the same edge type.
 
 
 
-\begin{table}
+\begin{table}[h]
   \centering
-  \begin{tabular}{p{0.2\textwidth} c}
+  \begin{tabular}{p{0.2\textwidth} p{0.1\textwidth} c}
     \toprule
-    \textbf{Type} & \textbf{Liveness Semantics} \\
+    \textbf{Type} && \textbf{Liveness Semantics} \\
     \midrule
-    Strong transition liveness &
+    Strong transition liveness &&
                                  $\underset{i \in [1,N]}{\land} \mathcal{G}(\mathcal{F}(t[i] \neq \sharp))$
     \\
     \midrule
-    Weak transition liveness & $\mathcal{G}(\mathcal{F}(\underset{i \in [1,N]}{\lor} t[i] \neq \sharp))$ \\
+    Weak transition liveness && $\mathcal{G}(\mathcal{F}(\underset{i \in [1,N]}{\lor} t[i] \neq \sharp))$ \\
     \midrule
-    Unrestricted & $\top$ \\
+    Unrestricted && $\top$ \\
     \bottomrule
   \end{tabular}
   \caption{Liveness Semantics}
@@ -692,7 +770,7 @@ implemented in the TACK tool. It requres that at every position \emph{at least
   one} timed automaton will eventually perform a non-null transition.
 %todo liveness background?
 
-\begin{table}
+\begin{table}[h]
   \centering
   \begin{tabular}{l c c}
     \toprule
@@ -712,8 +790,8 @@ constraints. As we have seen in Section~\ref{bounded-sat}, the edge variables
 are necessary for defining which state an automaton is located in during the
 instant of transition. However the freedom to choose between two possible edge
 types is often not needed, and adds additional overhead to the solver. To speed
-up problems that do not have invariant edge cases, TACK provides the open to set
-all edge variables to right-closed in every time position. As seen in
+up problems that do not have invariant edge cases, TACK provides the option to
+set all edge variables to right-closed in every time position. As seen in
 Table~\ref{table:edge-def}, this is contrasted with the `open' edge semantics,
 which do not place any additional restrictions on the edge variables.
 
@@ -879,7 +957,7 @@ operations over variables cannot be represented. As a result, in this
 implementation, variable guards may only test for equality, and different
 variables cannot be added or subtracted in a variable assignment statement.
 
-\begin{table}
+\begin{table}[hb]
 \centering
 \begin{tabular}{ll}
  Transition Bit & BitVector\\
@@ -942,7 +1020,7 @@ said to be in the same region if at both positions $loop$ and $k{+}1$:
 \end{itemize}
 These conditions are sufficient to ensure that the clock valuation in each
 position belongs to the same region, a concept expanded on in Kindermann's
-work\cite{kindermann12}. This allows \aez to represent loops where the elapsed
+work\cite{kindermann12}. This allows \aez\ to represent loops where the elapsed
 time of each loop iteration is constrained to be less than the elapsed time of
 the previous iteration. Although a lasso with a fixed amount of time per-loop
 iteration does not exist, there exists infinite series of loop iterations, each
@@ -1764,7 +1842,9 @@ at the same time.
 \footnotesize
 \setstretch{0.6}
 \centering
-\caption{Time required to solve the Fischer Benchmark Properties}
+\caption{Time required to solve the Fischer Properties (\aez). A \cmark\
+  indicates the property is satisfied, a \xmark\ indicates that a counterexample
+  was found. Blank entries incidate no result after two hours.}
 \label{table:fischer-results-aez}
 \begin{tabular}{c|c|r r r r r r r r r}
 \toprule
@@ -1825,7 +1905,9 @@ at the same time.
 \footnotesize
 \setstretch{0.6}
 \centering
-\caption{Time required to solve the Fischer Benchmark Properties}
+\caption{Time required to solve the Fischer Properties (ta2smt). A \cmark\
+  indicates the property is satisfied, a \xmark\ indicates that a counterexample
+  was found. Blank entries incidate no result after two hours.}
 \label{table:fischer-results-ta2smt}
 \begin{tabular}{c|c|r r r r r r r r r}
 \midrule
@@ -1987,9 +2069,9 @@ r  r
    \bottomrule
   \cline{1-11}
 \end{tabular}
-\caption {Time (s) required to check the property of the CSMA/CD Protocol.
-The symbol \cmark\ indicates that the property is satisfied, i.e., the \cltloc\	formula is unsatisfiable.
-The symbol \xmark\ indicates that the property is not satisfied, i.e., the \cltloc\	formula is satisfiable.}
+\caption {Time (s) required to check the property of the CSMA/CD Protocol. A \cmark\
+  indicates the property is satisfied, a \xmark\ indicates that a counterexample
+  was found. Blank entries incidate no result after two hours.}
 \label{table:csmacd-results}
 \end{table}
 
@@ -2089,9 +2171,9 @@ r  r
    \hline
   \cline{1-11}
 \end{tabular}
-\caption {Time (s) required to check the property of the Token Ring.
-The symbol \cmark\ indicates that the property is satisfied, i.e., the \cltloc\	formula is unsatisfiable.
-The symbol \xmark\ indicates that the property is not satisfied, i.e., the \cltloc\	formula is satisfiable.}
+\caption {Time (s) required to check the property of the Token Ring. A \cmark\
+  indicates the property is satisfied, a \xmark\ indicates that a counterexample
+  was found. Blank entries incidate no result after two hours.}
 \label{table:token-results}
 \end{table*}
 
