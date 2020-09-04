@@ -688,17 +688,31 @@ initial state as \(0\). The second formula initializes each variable
 each initial state hold in the initial position.
 
 % TODO: clocks?
+Formulas 4 and 5 are the clock constraints, and describe how the active value of
+the clock evolves throughout the trace. To both test the value of a clock and
+simultaneously reset the value during a transition, TACK has used two clock
+variables to encode a single clock value. There is currently a work in progress
+to extent \cltloc\ to support simultaneous test and reset, however at the time
+of writing this is not published. For a clock $x$, $x_{v}$ holds the index of
+the active clock value, and references to the clock value elsewhere are
+syntactic sugar for evaluating this variable and then choosing the appropriate
+clock value. The active value is never zero, and a clock reset at position $i$
+is not reflected in the formula until position $i{+}1$.
 
-Formula $\varphi$ defines the semantics for the null transition. If a Timed
+Formula $\varphi_{6}$ defines the semantics for the null transition. If a Timed
 Automaton performs a null transition then at the moment of transition, the state
-invariant must hold both before and after clock resets are applied.
+invariant must hold both before and after clock resets are applied. The function
+$r_{1}$ replaces the value of any reset clock with $0$, thus capturing the
+post-reset value of any clock used in the invariant.
 
-Formula $\varphi$ encodes the discrete transitions. Each must respect the guards
+Formula $\varphi_{7}$ encodes the discrete transitions. Each must respect the guards
 and assignments of the transitions, the TA must currently be in the source state
 of the transition, and must be in the destination state in the following
 position. $\varphi_{edge}$ encodes the two possible edge states, right and
 left-closed, and ensures that the invariants are satisfied, either weakly or
-strongly depending on the edge type.
+strongly depending on the edge type. Function $r_{2}$ again ensures that in the
+event of a clock reset, the the invariants of the destination state are
+evaluated against the correct clock values.
 
 The final three formulas capture the sufficient conditions for a discrete
 transition. The active state of a TA my not change, nor may a clock be reset,
