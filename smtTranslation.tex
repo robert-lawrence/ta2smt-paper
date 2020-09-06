@@ -51,7 +51,9 @@
 \newpage
 
 \clearpage
-\chapter{Abstract}\label{abstract}
+\section*{Abstract}\label{abstract}
+\addcontentsline{toc}{section}{Abstract}
+
 Timed Automata (TA) are a de facto modeling standard for systems with
 time-sensitive properties. A common task is to verify if a given network of TA
 satisfy a given property for every possible execution of the network. These
@@ -73,41 +75,42 @@ including SMT-LIB2 and has strong support for several SMT logics. We introduce
 several optimizations that allow us to significantly outperform the \cltloc\
 encoding, and correct deficiencies in the original encoding.
 
-\chapter{Sommario}\label{sommario}
+\section*{Sommario}\label{sommario}
+\addcontentsline{toc}{section}{Sommario}
 
 Gli Automi temporizzati (TA) sono uno standard di modellazione de facto per
-sistemi con proprietà sensibili al tempo. Un compito comune è quello di
+sistemi con proprietà sensibili al tempo. Un' attività comune è quella di
 verificare se una data rete di TA soddisfare una data proprietà per ogni
-possibile esecuzione della rete. Questi Le domande si prestano ad essere
-espresse in Logiche temporali lineari (LTL), che permette espressioni su
-proposizioni atomiche definite nel tempo posizioni in $\mathbb{N}$. Ci basiamo
-sul TA solver TACK, che supporta proprietà espresse nella ricca logica temporale
-di intervallo metrico (MITL), e codifica sia la rete TA che la proprietà da
-verificare in una variante di Linear Temporal Logic, Constraint LTL over clocks
-(CLTLoc). Il CLTLoc prodotto formula può quindi essere risolto con strumenti
-come Zot, che trasformano CLTLoc proprietà in SMT-LIB2, un linguaggio solutore
-SMT standardizzato con supporto per BitVector e logiche reali.
+possibile esecuzione della rete. Le proprietà si prestano ad essere espresse in
+Logica temporale lineare (LTL), che permette di esprimere proposizioni atomiche
+definite nel tempo. Ci basiamo sul TA solver TACK, che supporta proprietà
+espresse nella ricca logica temporale Metric Interval Temporal Logic (MITL), e
+codifica sia la rete TA che la proprietà da verificare in una variante di LTL,
+Constraint LTL over clocks (CLTLoc). La CLTLoc risultante formula può quindi
+essere risolta con strumenti come Zot, che trasformano CLTLoc in SMT-LIB2, un
+linguaggio solutore SMT standardizzato con supporto per BitVector e logiche
+reali.
 
 Vi presentiamo un nuovo metodo che conserva la codifica TACK delle proprietà
-MITL durante la codifica della rete di Automata temporizzata direttamente in
-SMT-LIB2, utilizzando sia la logica BitVector che la logica delle funzioni a
-valore reale. Il nostro principale Il risolutore SMT mirato è lo Z3 di
-Microsoft, che supporta molti formati standardizzati, compreso SMT-LIB2 e ha un
-forte supporto per diverse logiche SMT. Vi presentiamo diverse ottimizzazioni
-che ci permettono di sovraperformare in modo significativo il CLTLoc codifica, e
-correggere le carenze nella codifica originale.
+MITL durante la codifica della rete di TA direttamente in SMT-LIB2, utilizzando
+sia la logica BitVector che la logica delle funzioni a valore reale. Il nostro
+principale risolutore SMT mirato è lo Z3 di Microsoft, che supporta molti
+formati standardizzati, compreso SMT-LIB2 e ha un forte supporto per diverse
+logiche SMT. Vi presentiamo diverse ottimizzazioni che ci permettono di
+migliorare in modo significativo la codifica CLTLoc, di correggere le
+carenze nella codifica originale.
 
 \chapter{Introduction}\label{introduction}
 
-Timed Automata\cite{alur94} (TA) are a popular tool for modeling time-sensitive
+Timed Automata~\cite{alur94} (TA) are a popular tool for modeling time-sensitive
 systems. By combining the transition semantics of finite automata with
 real-valued clocks, they are of great theoretical and practical interest for
 representing time-bound processes and applications. They have found common use
 in the domain of model checking, where system representations are evaluated
 against a given property of interest. Various tools and encoding languages exist
 for a variety of applications and use cases. These include the current de facto
-standard Uppaal\cite{larsen97}, as well as RED and
-$\text{MITL}_{0,\infty}$BMC\cite{kindermann13}.
+standard Uppaal~\cite{larsen97}, as well as RED and
+$\text{MITL}_{0,\infty}$BMC~\cite{kindermann13}.
 
 Model Checking refers to a verification technique for solving properties of
 state transition systems. A wide variety of industrial applications, including
@@ -124,7 +127,7 @@ invariant property (and vice versa).
 
 
 TACK is a bounded model checker for networks of timed automata developed by
-Menghi et al\cite{tack20}. Properties to be verified are specified in Metric
+Menghi et al~\cite{tack20}. Properties to be verified are specified in Metric
 Interval Temporal Logic (MITL), and are converted along with the TA network into
 \cltloc, a variant of Constraint Linear Temporal Logic supporting real-valued
 clocks. MITL and \cltloc\ are rich logics that allow for continuous-time
@@ -143,39 +146,54 @@ to more efficiently encode TA constructs, noticeably eliminating the need for
 BitVectors to track the active state of the TA, instead relying on the active
 transition to carry this information.
 
+In this paper, we will first present the current state-of-the-art for bounded
+model checking (Chapter 2), followed by an in-depth description of both the required
+preliminary knowledge and the specific implementation of the TACK bounded model
+checker (Chapter 3). We will then present our novel contribution to the problem
+of encoding the TA network into a form suitable for an SMT bounded model checker
+(Chapter 4). Afterwords we will present our experimental results (Chapter 5) as
+well as summary remarks (Chapter 6).
+
 \chapter{State of the Art}\label{stateoftheart}
 
 
 For many years, model checking was performed using Binary Decision Diagrams
-(BDDs)\cite{bryant86}, which offer many time- and space-complexity advantages
-over explicit state enumeration\cite{burch92}. However to efficiently handle
-larger state spaces, BDDs have been largely abandoned in favor of bounded model
-checking techniques. A representative example is NuSMV\cite{cimatti02}, which
-was originally designed to use BDDs but has since been rewritten to use
-SAT-based bounded model checking. Using the strength of modern-day SAT and SMT
-solvers, bounded model checking encodes the semantics of the state transition
-system into SAT or SMT form, and then tasks the solver with finding a valid
-assignment of states to time positions starting from a given initial state such
-that the desired reachability property is true (resp.\ false for invariant
-properties). Because such solvers require finite state spaces, the number of
-time positions considered is limited by a bound $k$, hence the name bounded
-model checking. In addition to finding finite traces, this model has also been
+(BDDs)~\cite{bryant86}, which offer many time- and space-complexity advantages
+over explicit state enumeration~\cite{burch92}. BDDs are symbolic
+representations of functions over boolean variables that exploit symmetries to
+avoid explicitly representing the entire state space directly. However to
+efficiently handle larger state spaces, BDDs have been largely abandoned in
+favor of bounded model checking techniques. A representative example is
+NuSMV~\cite{cimatti02}, which was originally designed to use BDDs but has since
+been rewritten to use SAT-based bounded model checking. Using the strength of
+modern-day SAT and SMT solvers, bounded model checking encodes the semantics of
+the state transition system into SAT or SMT form, and then tasks the solver with
+finding a valid assignment of states to time positions starting from a given
+initial state such that the desired reachability property is true (resp.\ false
+for invariant properties). Because such solvers require finite state spaces, the
+number of time positions considered is limited by a bound $k$, hence the name
+bounded model checking.
+
+In addition to finding finite traces, bounded model checking has also been
 applied to finding traces of infinite length that can be represented in finite
-space, often through the use of an infinite loop through a finite number of
-states.
+space. This is accomplished by limiting the search to so-called ``lasso-shaped''
+traces. These traces begin with an initial finite sequence of states before
+entering an infinite loop of states. Thus only a finite number of states need to
+be explicitly represented by the bounded model checker, which can search for
+lassos of length up to the given bound.
 
 To represent state systems with real-time properties, Timed Automata have
-emerged as a de facto standard\cite{alur94}. At their core, timed automata are
+emerged as a de facto standard~\cite{alur94}. At their core, timed automata are
 finite state machines that are enriched with real-valued clocks that track the
 passage of time. These clocks can then be incorporated into transition guards
 and state invariants to control and synchronize automata. Unfortunately while
 Timed Automata have had great success at modeling real-time systems, they have
 not been useful for representing the properties to be verified, and in fact it
 has been shown that verification using TA to represent properties is
-undecidable\cite{alur94}. As a result various temporal logics have been
+undecidable~\cite{alur94}. As a result various temporal logics have been
 developed by different solvers to represent the properties to be evaluated.
 
-Uppaal\cite{larsen97} is a de facto standard for model checking systems of timed
+Uppaal~\cite{larsen97} is a de facto standard for model checking systems of timed
 automata. Uppaal supports a subset of Timed Computation Tree Logic (TCTL), an
 extension of the widely known Computation Tree Logic (CTL) with real-time
 properties. The CTL family of logics uses the expressive tree-view of future
@@ -188,42 +206,56 @@ In addition to the work done with branching-time logics, there has been interest
 in the expressive power of Metric Temporal Logic (MTL), a form of Linear
 Temporal Logic (LTL) with Interval constraints on the `until' operator. While
 powerful, standard MTL properties are undecidable in general for infinite
-traces\cite{bouyer09}. To make MTL tractable, the subset MITL was proposed in
-1991\cite{Alur91thebenefits}, which offers decidable continuous semantics for
-TAs. Examples of MITL solvers include a tool developed by Kindermann et al.\
-\cite{kindermann13}, which relies on a further subset $\text{MITL}_{0,\infty}$
-for property validation. Another is TACK, which was developed by Menghi et
-al.\cite{tack20} and has implemented a bounded model checker for infinite traces
-over the full MITL logic. To improve the speed of the verification process, TACK
-encodes the TA and property to be verified into BitVector logic, which is
-supported by the standardized SMT-LIB2 language.\cite{baresi15,baresi16} To
-avoid the incompleteness of the naive lasso encoding shown by
-Kindermann\cite{kindermann12}, both tools use a region-based encoding of the
-clock values. This is paired with a ``non-Zeno'' requirement, so that the
-infinite traces span an infinite amount of time. In the following chapter we
-will summarize the background and work accomplished in the TACK solver, before
-then presenting our contribution to the TACK verification tool.
+traces~\cite{bouyer09}. To make MTL tractable, the subset MITL was proposed in
+1991~\cite{Alur91thebenefits}, which offers decidable continuous semantics for
+TAs. Examples of MITL solvers include a tool developed by Kindermann et
+al.~\cite{kindermann13}, which relies on a further subset
+$\text{MITL}_{0,\infty}$ for property validation, and currently supports both
+finite and lasso-shaped bounded traces. Another is TACK, which was developed by
+Menghi et al.~\cite{tack20} and has implemented a bounded model checker for
+lasso-shaped infinite traces over the full MITL logic. To improve the speed of
+the verification process, TACK encodes the TA and property to be verified into
+BitVector logic, which is supported by the standardized SMT-LIB2
+language.~\cite{baresi15,baresi16} To avoid the incompleteness of the naive
+lasso encoding shown by Kindermann~\cite{kindermann12}, both tools use a
+region-based encoding of the clock values. This is paired with a ``non-Zeno''
+requirement, so that the infinite traces span an infinite amount of time. In the
+following chapter we will summarize the background and work accomplished in the
+TACK solver, before then presenting our contribution to the TACK verification
+tool.
 
 \chapter{Preliminaries}\label{prelims}
+
+In this chapter we present the current TACK bounded model checking procedure,
+along with the required prerequisite knowledge. We begin with a discussion on
+Timed Automata, giving an intuitive introduction to the topic before
+formally defining the TA used in the rest of the paper. We then discuss Bounded
+Model Checking, formally defining a \emph{trace} of a TA network and presenting
+an illustrative example trace. We then discuss the two temporal logics used in
+the TACK encoding, \cltloc\ and MITL. With the theoretical background complete,
+we move on to discussing the TACK encoding itself, followed by an summary of
+BitVector logic and \aez, the tool used by TACK to convert \cltloc\ formulas
+into BitVector form.
+
 \section{Timed Automata}\label{timed-automata}
 
 Timed Automata are a useful model for many interactions that require precise
-timing mechanisms\cite{alur94}. Each Timed Automaton has a set of states, one of
-which is active at any given moment, much like a Finite State Machine. Also like
-a FSM, a Timed Automaton has a set of transitions that allow it to move between
-different states. However these transitions come with powerful timing properties
-that allow for finer control over the progression of the automata. Included with
-our automata is a network of clocks and integer variables. Clocks progress as
-time passes, and can be used alongside variables as prerequisites for taking
-transitions and remaining in states. Transitions can also reset these clocks
-(and assign new values to variables), allowing for communication and shared
-state between different Timed Automata. For explicit synchronization, we define
-a set of synchronization primitives that can be used to coordinate transitions
-between different automata. Finally, states can be labeled with atomic
-propositions, to aid in defining model properties that we will then verify over
-the network. To help concretize this concept, we will introduce a simple Timed
-Automaton, which will be used throughout this paper to help visualize important
-concepts.
+timing mechanisms~\cite{alur94}. Each Timed Automaton has a set of states, one
+of which is active at any given moment, much like a Finite State Machine (FSM).
+Also like a FSM, a Timed Automaton has a set of transitions that allow it to
+move between different states. However these transitions come with powerful
+timing properties that allow for finer control over the progression of the
+automata. Included with our automata is a network of clocks and integer
+variables. Clocks progress as time passes, and can be used alongside variables
+as prerequisites for taking transitions and remaining in states. Transitions can
+also reset these clocks (and assign new values to variables), allowing for
+communication and shared state between different Timed Automata. For explicit
+synchronization, we define a set of synchronization primitives that can be used
+to coordinate transitions between different automata. Finally, states can be
+labeled with atomic propositions, to aid in defining model properties that we
+will then verify over the network. To help concretize this concept, we will
+introduce a simple Timed Automaton, which will be used throughout this paper to
+help visualize important concepts.
 
 %\begin{figure}[h]
 %    \centering
@@ -390,7 +422,7 @@ clocks used by the specific timed automaton \(\mathcal{A}_{i} \in \mathcal{A}\).
 %       then move on to the TACK section
 %
 
-Bounded Model Checking\cite{bouyer09} refers to the problem of evaluating if a
+Bounded Model Checking~\cite{bouyer09} refers to the problem of evaluating if a
 given network of timed automata satisfies a given model, or property. To perform
 this evaluation, the TA network along with the property to be evaluated are
 transformed into a form acceptable by a Satisfiability Modulo Theories, or SMT
@@ -475,7 +507,7 @@ transition $x(2) + \delta(2) = 2$. Is this trace therefore illegal? This raises
 an interesting question: at the moment of transition, what is the active state?
 Possible answers could include the source state, the destination, both, or
 neither. Different models of Timed Automata implement this differently. Some,
-like Uppaal\cite{larsen97} implement so called ``super-dense'' time semantics,
+like Uppaal~\cite{larsen97} implement so called ``super-dense'' time semantics,
 in which the TA may be in multiple states in the same time instance. In our
 model, the TA is always in exactly one state at every instant in time. If at the
 moment of transition the TA remains in the source state, the transition is said
@@ -540,18 +572,18 @@ the bound \(k\), as the solver has shown that no lasso-shaped traces of length
 lasso-shaped traces may seem to be a severe limitation, it has been shown that
 for a given TA network $\mathcal{A}$, there exists a limit $K$ such that if a
 counterexample for a given property exists, there exists a lasso-shaped
-counterexample of length no more than $K$\cite{biere99}.
+counterexample of length no more than $K$~\cite{biere99}.
 
 \section{Constraint LTL Over Clocks}\label{cltloc}
 
 Constraint LTL is an extension of linear temporal logic allowing formulas over a
-given constraint system\cite{demri07}. \cltloc\ is a constraint LTL where the
+given constraint system~\cite{demri07}. \cltloc\ is a constraint LTL where the
 constraint system consists of clocks defined over the positive real numbers.
 This allows for the construction of formulas defined over atomic propositions
 and clocks. A clock is a variable over \(\mathbb{R}_{\geq 0}\) whose value
 changes between LTL positions to model the passage of time. Like clocks in timed
 automata, clocks can be reset back to zero. In addition \cltloc\ has been
-extended to support expressions over arithmetical variables\cite{marconi16}.
+extended to support expressions over arithmetical variables~\cite{marconi16}.
 
 A formula in \cltloc\ consists of atomic propositions, clock formulas, and
 formulas over integer variables, which are combined using the standard LTL
@@ -567,7 +599,7 @@ variables. \cltloc\ formulas are defined as follows:
 \[\phi := p \BitOr x \sim c \BitOr \exp_{1} \sim \exp_{2} \BitOr \mathcal{X}(n) \sim \exp \BitOr \phi \land \phi \BitOr \neg \phi \BitOr \mathcal{X}\phi \BitOr \phi \mathcal{U} \phi \]
 Where \(a \in AP\), \(x \in X\), \(c \in \mathbb{N}\), \(n \in Int\),
 $\sim \in \{<,=\} $ and \(exp\) are arithmetic formulas over integer variables
-and integers (defined in Section \ref{timed-automata}).
+and integers (defined in Section~\ref{timed-automata}).
 
 As mentioned before, clocks are special dense variables over
 \(\mathbb{R}_{\geq 0}\) that `progress' between different LTL positions. To be
@@ -610,9 +642,42 @@ $(\pi,\sigma,\iota)$ exists such that $(\pi,\sigma,\iota),0 \vDash \phi$. This
 is often shortened to simply $(\pi,\sigma,\iota) \vDash \phi$.
 
 
+\section{MITL}\label{mitl}
+
+Metric Interval Temporal Logic is a restriction of Metric Temporal Logic (MTL)
+such that subscripts must be intervals~\cite{bouyer09}. An interval $I$ is a
+convex region of $\mathbb{R}_{\geq 0}$. The bounds of this region must be in the
+set $\{\mathbb{N} \cup \infty\}$. We will represent an interval as
+$\langle a,b \rangle$ or $\langle a,\infty )$, where $a,b \in \mathbb{N}$,
+$\langle\ \in \{\ (,[\ \}$ and $\rangle \in \{\ ),]\ \}$.
+
+The following grammar describes the set of MITL formulas:
+\[\phi := \alpha\ |\ \phi \lor \phi\ |\ \neg \phi\ |\ \phi\ \mathcal{U}_{I} \phi\]
+Where $\alpha$ represents the set of atomic propositions. The set of
+propositions currently supported by TACK consists of the set $AP$ (atomic
+propositions of the network of TA) and propositions of the form $n = c$, where
+$n$ is an integer variable and $c$ is a constant value.
+
+The semantics of MITL are defined as follows. An MITL signal is a function
+$M : \mathbb{R}_{\geq 0} \rightarrow \mathcal{P}(AP) \times \mathbb{Z}^{Int}$.
+At a given time $t$, $M(t) = P, v_{var}$ gives us the set of $AP$ that evaluate
+to true $P$, as well as a valuation for the integer variables $v_{var}$. For a
+given signal $M$, $M,t \vDash \phi$ is defined as follows:
+\begin{align*}
+  &M,t \vDash \alpha && \Leftrightarrow && M(t) = (\psi,v_{var}) \land \alpha \in \psi \\
+  &M,t \vDash n = c && \Leftrightarrow && M(t) = (\psi,v_{var}) \land v_{var}(v) = c \\
+  &M,t \vDash \phi_{1} \land \phi_{2} && \Leftrightarrow && (M,t \vDash \phi_{1}) \land (M,t \vDash \phi_{2}) \\
+  &M,t \vDash \neg \phi && \Leftrightarrow && \neg (M,t \vDash \phi) \\
+  &M,t \vDash \phi_{1} \mathcal{U}_{I} \phi_{2} && \Leftrightarrow && \exists t' > t, t' - t \in I, (M,t \vDash \phi_{2}) \land \forall t'' \in (t,t'), (M,t'' \vDash \phi_{1}) \\
+\end{align*}
+
+An MITL formula $\phi$ is said to be \emph{satisfiable} if an interpretation
+$M$ exists such that $M,0 \vDash \phi$. We then say that $M$ models $\phi$.
+
+
 \section{TACK \cltloc\ Translation}\label{prelim-tack}
 
-The TACK\cite{tack20} tool developed by Menghi et al.\ converts Bounded
+The TACK~\cite{tack20} tool developed by Menghi et al.\ converts Bounded
 Satisfiability Checking problems into the CLTLoc language. TACK uses Metric
 Interval Temporal Logic to specify the property to be checked for satisfiability,
 which allows for more compact and powerful specifications of the desired
@@ -756,6 +821,30 @@ an automaton not included in the set $S$ performs a sync on $\alpha$.
 \emph{Same-edge} is true if the two automatons have the same edge type.
 
 
+\emph{Liveness Constraints} When we introduced the concept of traces, we gave
+examples in which at least one Timed Automata performed a non-null (or discrete)
+transition at every position in the trace. It seems natural to require at least
+one discrete transition in each position, because otherwise the state of the
+network would not change, and we could simply remove the unneccessary duplicate
+position from the trace. Unfortunately the addition of MITL properties makes
+this a bit more complex. Consider the MITL property
+$\mathcal{G}_{[0,\infty)} \neg(\mathcal{G}_{[0,10]}\ \alpha)$, where $\alpha$ is
+an atomic proposition which only evaluates to true in state $q$. This property
+states that a TA is never in state $q$ for 10 or more time units before leaving.
+Now let us consider a hypothetical counterexample. In trace $\eta$, the TA
+transitions into state $q$ at position $i$, and then transitions to another
+state in position $i{+}i$, with $\delta(i)=20$. This clearly violates the
+property, as the TA remained in state $q$ for 20 seconds. However in order to
+detect this violation, the MITL encoding requires there to be a specific
+position in which the property is violated. Unfortunately position $i{+}1$ does
+not suffice, as the TA is no longer in the critical state $q$. This
+counterexample can only be detected if the solver has the ability to add another
+time position in-between $i$ and $i{+}1$, where at least 10 units of time has
+passed \textbf{and} the TA is still located in state $q$. Thus we must tolerate
+positions in which every TA performs a null transition. That being said, we
+often do not wish to accept traces in which discrete transitions \textbf{never}
+occur. These requirements are termed \emph{liveness constraints}.
+
 
 \begin{table}[h]
   \centering
@@ -772,18 +861,19 @@ an automaton not included in the set $S$ performs a sync on $\alpha$.
     Unrestricted && $\top$ \\
     \bottomrule
   \end{tabular}
-  \caption{Liveness Semantics}
+  \caption{Possible Liveness Constraints}
   \label{table:liveness-def}
 \end{table}
 
 In addition to the TA and synchronization constraints, TACK includes support for
-an optional \emph{liveness constraint}, termed Strong Transition Liveness, which
-is shown in Table~\ref{table:liveness-def}. This
-guarantees that every time position, eventually in the future all timed
-automaton in the network will take a non-null transition. Although a weaker
-version termed Weak Transition Liveness is defined in the TACK paper, it is not
-implemented in the TACK tool. It requires that at every position \emph{at least
-  one} timed automaton will eventually perform a non-null transition.
+optional liveness constraints. The first is termed Strong Transition Liveness,
+which is shown in Table~\ref{table:liveness-def}. This guarantees that every
+time position, eventually in the future all timed automaton in the network will
+take a discrete transition. Although a weaker version termed Weak Transition
+Liveness is defined in the TACK paper, it is not implemented in the TACK tool.
+It requires that at every position \emph{at least one} timed automaton will
+eventually perform a discrete transition. Finally the Unrestricted Liveness
+option places no restrictions on TA liveness.
 %todo liveness background?
 
 \begin{table}[h]
@@ -792,7 +882,7 @@ implemented in the TACK tool. It requires that at every position \emph{at least
     \toprule
     \textbf{Type} &\quad\quad\quad\quad & \textbf{Edge Semantics} \\
     \midrule
-    Right-closed & & $\mathcal{G} \underset{i \in [1,N]}{\land} edge^{RC}[i]$ \\
+    Right-closed & & $\underset{i \in [1,N]}{\land} \mathcal{G} (edge^{RC}[i])$ \\
     \midrule
     Open & & $\top$ \\
     \bottomrule
@@ -801,15 +891,16 @@ implemented in the TACK tool. It requires that at every position \emph{at least
   \label{table:edge-def}
 \end{table}
 
-In addition to liveness, TACK also allows for customization of its edge
-constraints. As we have seen in Section~\ref{bounded-sat}, the edge variables
-are necessary for defining which state an automaton is located in during the
-instant of transition. However the freedom to choose between two possible edge
-types is often not needed, and adds additional overhead to the solver. To speed
-up problems that do not have invariant edge cases, TACK provides the option to
-set all edge variables to right-closed in every time position. As seen in
-Table~\ref{table:edge-def}, this is contrasted with the `open' edge semantics,
-which do not place any additional restrictions on the edge variables.
+\emph{Edge Constraints} In addition to liveness, TACK also allows for
+customization of its edge constraints. As we have seen in
+Section~\ref{bounded-sat}, the edge variables are necessary for defining which
+state an automaton is located in during the instant of transition. However the
+freedom to choose between two possible edge types is often not needed, and adds
+additional overhead to the solver. To speed up problems that do not have
+invariant edge cases, TACK provides the option to set all edge variables to
+right-closed in every time position. As seen in Table~\ref{table:edge-def}, this
+is contrasted with the `open' edge semantics, which do not place any additional
+restrictions on the edge variables.
 
 
 \section{Bit-Vector Logic}\label{bvlogic}
@@ -843,39 +934,6 @@ convention where \(1\) is true and \(0\) is false. For example, the expression
 \(\big( \overleftarrow{1100} \Rightarrow \overleftarrow{1010} \big) \) would
 evaluate to \(\overleftarrow{1101}\), since \(a \rightarrow b\) is equivalent to
 \(a \lor \neg b\).
-
-\section{MITL}\label{mitl}
-
-Metric Interval Temporal Logic is a restriction of Metric Temporal Logic (MTL)
-such that subscripts must be intervals\cite{bouyer09}. An interval $I$ is a
-convex region of $\mathbb{R}_{\geq 0}$. The bounds of this region must be in the
-set $\{\mathbb{N} \cup \infty\}$. We will represent an interval as
-$\langle a,b \rangle$ or $\langle a,\infty )$, where $a,b \in \mathbb{N}$,
-$\langle\ \in \{\ (,[\ \}$ and $\rangle \in \{\ ),]\ \}$.
-
-The following grammar describes the set of MITL formulas:
-\[\phi := \alpha\ |\ \phi \lor \phi\ |\ \neg \phi\ |\ \phi\ \mathcal{U}_{I} \phi\]
-Where $\alpha$ represents the set of atomic propositions. The set of
-propositions currently supported by TACK consists of the set $AP$ (atomic
-propositions of the network of TA) and propositions of the form $n = c$, where
-$n$ is an integer variable and $c$ is a constant value.
-
-The semantics of MITL are defined as follows. An MITL signal is a function
-$M : \mathbb{R}_{\geq 0} \rightarrow \mathcal{P}(AP) \times \mathbb{Z}^{Int}$.
-At a given time $t$, $M(t) = P, v_{var}$ gives us the set of $AP$ that evaluate
-to true $P$, as well as a valuation for the integer variables $v_{var}$. For a
-given signal $M$, $M,t \vDash \phi$ is defined as follows:
-\begin{align*}
-  &M,t \vDash \alpha && \Leftrightarrow && M(t) = (\psi,v_{var}) \land \alpha \in \psi \\
-  &M,t \vDash n = c && \Leftrightarrow && M(t) = (\psi,v_{var}) \land v_{var}(v) = c \\
-  &M,t \vDash \phi_{1} \land \phi_{2} && \Leftrightarrow && (M,t \vDash \phi_{1}) \land (M,t \vDash \phi_{2}) \\
-  &M,t \vDash \neg \phi && \Leftrightarrow && \neg (M,t \vDash \phi) \\
-  &M,t \vDash \phi_{1} \mathcal{U}_{I} \phi_{2} && \Leftrightarrow && \exists t' > t, t' - t \in I, (M,t \vDash \phi_{2}) \land \forall t'' \in (t,t'), (M,t'' \vDash \phi_{1}) \\
-\end{align*}
-
-An MITL formula $\phi$ is said to be \emph{satisfiable} if an interpretation
-$M$ exists such that $M,0 \vDash \phi$. We then say that $M$ models $\phi$.
-
 
 \section{AE2SBVZOT}\label{zot-encoding}
 
@@ -1018,7 +1076,7 @@ expression. These can then be used to construct larger expressions using the
 rules shown in Table~\ref{table:zot-constraints}.
 
 Unlike the other terms, clocks cannot simply be constrained to hold the same
-value in the loopback position. As shown by Kindermann\cite{kindermann12} this
+value in the loopback position. As shown by Kindermann~\cite{kindermann12} this
 excludes certain valid lasso shaped traces. To avoid this \aez\ adopts the
 region-based clock constraints suggested by Kindermann. Two clock valuations are
 said to be in the same region if at both positions $loop$ and $k{+}1$:
@@ -1036,7 +1094,7 @@ said to be in the same region if at both positions $loop$ and $k{+}1$:
 \end{itemize}
 These conditions are sufficient to ensure that the clock valuation in each
 position belongs to the same region, a concept expanded on in Kindermann's
-work\cite{kindermann12}. This allows \aez\ to represent loops where the elapsed
+work~\cite{kindermann12}. This allows \aez\ to represent loops where the elapsed
 time of each loop iteration is constrained to be less than the elapsed time of
 the previous iteration. Although a lasso with a fixed amount of time per-loop
 iteration does not exist, there exists infinite series of loop iterations, each
@@ -1047,7 +1105,7 @@ Since the time per-loop iteration is no longer fixed, another constraint is
 required to ensure that no ``Zeno-shaped'' traces are allowed. In Zeno traces,
 the time elapsed in the infinite trace sums to a finite number. These cases are
 considered pathological and to exclude them, it has been
-proven\cite{kindermann12} that it is sufficient to require that in the loop
+proven~\cite{kindermann12} that it is sufficient to require that in the loop
 section of the trace, that every clock is either
 \begin{itemize}
   \item Reset at least once during the loop
@@ -1055,7 +1113,7 @@ section of the trace, that every clock is either
 \end{itemize}
 This concludes the \aez\ encoding of a \cltloc\ formula.
 
-\chapter{TA Encoding}\label{encoding}
+\chapter{Novel Encoding of Timed Automata Networks}\label{encoding}
 
 The previous work in this field has relied on first translating the TA network
 and property to be verified into the intermediate \cltloc\ representation, to be
@@ -1160,12 +1218,11 @@ the symbol \(\sim\) to signal that whether or not the BitVector is negated
 depends on the exact value of \(|\mathcal{T}_{i}|\). The key point is that each
 alias \(\overleftarrow{trans_{t}}\) represents when transition \(t\) is active -
 a bit at position \(l\) is set to \(1\) iff the transition occurs between
-positions \(l\) and \(l{+}1\).
-For clarity, let us consider an example TA with
+positions \(l\) and \(l{+}1\). For clarity, let us consider an example TA with
 \(\lceil\log_2 |\mathcal{T}|\rceil = 5\) and a transition \(t \in \mathcal{T}\)
-with \(\mathcal{T}_{i}[5] = t\). The base two representation of 5 is \(00101\), and therefore
-\(\overleftarrow{trans_t}_{[k+2]}\) is equivalent to \((\neg tb_5 \BitAnd
-\neg tb_4 \BitAnd tb_3 \BitAnd \neg tb_2 \BitAnd tb_1)\).
+with \(\mathcal{T}_{i}[5] = t\). The base two representation of 5 is \(00101\),
+and therefore \(\overleftarrow{trans_t}_{[k+2]}\) is equivalent to
+\((\neg tb_5 \BitAnd \neg tb_4 \BitAnd tb_3 \BitAnd \neg tb_2 \BitAnd tb_1)\).
 
 Another consideration we must make is for the transition edges. We add an
 additional term \(\overleftarrow{edge_{i}^{RC}}_{[k{+}2]},\ i \in [1,N]\) for
@@ -1765,12 +1822,49 @@ implemented all three options in our encoding, allowing the user to choose which
 one they will use to evaluate their traces.
 
 \chapter{Evaluation}\label{evaluation}
-In this chapter we present the results of several experimental evaluations of
-the SMT conversion process. These tests cover several different benchmarks
-common for bounded model checking programs. For comparison, results are
-presented alongside those of the previous iteration of the TACK program, to
-better judge the improvements made using the new process.
 
+The modular design of TACK aided us greatly in adding our novel `ta2smt'
+encoding to the existing TACK codebase. However due to the removal of \cltloc\
+as an intermediate language, some adjustments were required to integrate our
+solution with the existing solvers. Previously TACK assumed that an execution
+would countain five main steps:
+\begin{enumerate}
+  \item The TA Network file and MITL property file are read from the input
+  files and parsed.
+  \item The TA Network is converted into \cltloc.
+  \item The MITL property is converted into \cltloc.
+  \item The two \cltloc\ formulas are combined using a \cltloc\ `and'
+  expression.
+  \item The combined \cltloc\ property is written to disk and the external
+    converter (\aez) is invoked, which in turn invokes an SMT solver (Z3).
+\end{enumerate}
+While TACK was designed so that the converters used in steps 2 and 3 (and the
+external program used in step 5) could be easily modified, it was not
+anticipated that this general execution plan would need to change. However our
+implementation modifies this plan slightly as follows:
+\begin{enumerate}
+  \item The TA Network file and MITL property file are read from the input
+    files and parsed.
+  \item The TA Network is converted into SMT-LIB2.
+  \item The MITL property is converted into \cltloc.
+  \item The \cltloc\ formula representing the MITL property is written to disk,
+    and \aez\ is invoked to convert the formula into SMT-LIB2 (without invoking
+    Z3).
+  \item The two SMT-LIB2 files are combined, and Z3 is invoked to check for
+    satisfiabiltiy.
+\end{enumerate}
+We have therefore modified TACK to first determine which solution method is
+desired, and to then execute one of the two possible `solution plans' outlined
+above. Although currently ta2smt is the only algorithm available to execute step
+2 in the new plan, we have continued in the spirit of the original TACK design
+to make it simple for this algorithm to be modified and replaced, so that future
+improvements are encouraged.
+
+In this chapter we present the results of several experimental evaluations of
+the bounded model checking process. These tests cover several different
+benchmarks common for bounded model checking programs. For comparison, results
+are presented alongside those of the previous iteration of the TACK program, to
+better judge the improvements made using the new process.
 For both \aez\ and ta2smt, strong transition liveness was used in all of the
 tests. In addition all edges were constrained to be right-closed. These were the
 settings used to benchmark the original TACK application, and they remain the
@@ -1858,7 +1952,7 @@ at the same time.
 \footnotesize
 \setstretch{0.6}
 \centering
-\caption{Time required to solve the Fischer Properties (\aez). A \cmark\
+\caption[Time required to solve the Fischer Properties (\aez)]{Time required to solve the Fischer Properties (\aez). A \cmark\
   indicates the property is satisfied, a \xmark\ indicates that a counterexample
   was found. Blank entries indicate no result after two hours.}
 \label{table:fischer-results-aez}
@@ -1921,7 +2015,7 @@ at the same time.
 \footnotesize
 \setstretch{0.6}
 \centering
-\caption{Time required to solve the Fischer Properties (ta2smt). A \cmark\
+\caption[Time required to solve the Fischer Properties (ta2smt)]{Time required to solve the Fischer Properties (ta2smt). A \cmark\
   indicates the property is satisfied, a \xmark\ indicates that a counterexample
   was found. Blank entries indicate no result after two hours.}
 \label{table:fischer-results-ta2smt}
@@ -2014,112 +2108,7 @@ impossible for every process to complete this path from $b$ to $c$ and then back
 to $b$, and thus no valid lasso-shaped traces (with strong transition liveness)
 exist. Although not shown in the table, with a bound of $11$ there exists a
 valid trace for a 7-process network, with a bound of $12$ there exists a valid
-trace for 8 agents, and so on.
-
-\section{CSMA/CD}\label{evaluation-csma}
-
-The CSMA/CD (Carrier Sense Multiple Access/Collision Detection) protocol is a
-well known protocol for allowing multiple agents to share a communication
-channel, and was popularized by its inclusion in the Ethernet standard. The
-protocol includes 1 process to manage a shared communication bus, as well as a
-number of processes that wish to obtain exclusive access to the bus in order to
-send a message. When two processes attempt to send at the same time, the bus
-process detects the collision and uses the broadcast synchronization primitive
-to force the processes to wait a randomized amount of time before attempting to
-communicate again. While an agent is sending over the bus, the bus process can
-send a `busy' signal to the other agents, in order to simulate the agents
-listening to the bus and detecting a communication in-progress.
-
-\begin{align*}
-  \text{\textbf{live-csma}} := & \mathcal{G}_{(0,\infty)}(P1.begin\_send \rightarrow (\neg collision\_after\_deadline)) \\
-  P1.begin\_send := & (\neg P1.send) \land (P1.send\ \mathcal{U}_{(0,inf)} \top) \\
-  P1.collision\_after\_deadline := & \mathcal{G}_{(0,52]}(P1.send \land (P1.send\ \mathcal{U}_{ [0,inf) } (P1.send \land P2.send))) \\
-\end{align*}
-This protocol was tested to ensure that a collision is always detected before a
-certain amount of time has passed.
-The property \textbf{live-csma} asserts that after process 1 has been sending
-for 52 units of time, process 2 cannot begin sending until process 1 has finished.
-
-\begin{table}[t]
-\footnotesize
-\setstretch{0.6}
-%\small
-\center
-\begin{tabular}{
-r  r  r
-r  r  r
-r  r  r
-r  r
-}
-\toprule
-%\cline{3-11}
-%\cline{3-11}
-  \multicolumn{2}{c}{} &   \multicolumn{9}{c}{TACK \aez}  \\
-  \midrule
-  \multicolumn{2}{c}{}  &    \multicolumn{9}{c}{$n$}  \\
-  \midrule
-\multicolumn{1}{c}{}  & k &    \multicolumn{1}{c}{\textbf{2}} & \multicolumn{1}{c}{\textbf{3}} & \multicolumn{1}{c}{\textbf{4}} & \multicolumn{1}{c}{\textbf{5}} & \multicolumn{1}{c}{\textbf{6}} & \multicolumn{1}{c}{\textbf{7}} & \multicolumn{1}{c}{\textbf{8}} & \multicolumn{1}{c}{\textbf{9}} & \multicolumn{1}{c}{\textbf{10}}  \\
-%\cline{2-11}
-%   \hline
-\toprule
-  \multirow{5}{*}{\rotatebox[origin=c]{90}{\textbf{live-csmacd}}}
-     & \textbf{10} & 2.2\xmark & 1.9\xmark & 2.5\xmark & 4.3\xmark & 7.5\xmark & 8.0\xmark & 6.0\xmark & 11.7\xmark & 14.4\xmark \\
-     & \textbf{15} & 2.6\xmark & 4.4\xmark & 9.7\xmark & 6.7\xmark & 12.8\xmark & 14.0\xmark & 11.1\xmark & 22.2\xmark & 39.2\xmark \\
-     & \textbf{20} & 4.6\xmark & 11.3\xmark & 12.7\xmark & 20.7\xmark & 23.9\xmark & 22.9\xmark & 50.2\xmark & 80.2\xmark & 60.2\xmark \\
-     & \textbf{25} & 6.9\xmark & 8.5\xmark & 26.0\xmark & 23.4\xmark & 26.3\xmark & 40.1\xmark & 43.4\xmark & 75.1\xmark & 76.3\xmark \\
-     & \textbf{30} & 5.5\xmark & 23.6\xmark & 21.1\xmark & 37.8\xmark & 42.7\xmark & 44.0\xmark & 173.2\xmark & 101.7\xmark & 130.4\xmark \\
-  \toprule
-  \multicolumn{2}{c}{}  &   \multicolumn{9}{c}{TACK ta2smt}  \\
-    \midrule
-  \multicolumn{2}{c}{}  &    \multicolumn{9}{c}{$n$}  \\
-  \midrule
-\multicolumn{1}{c}{}  & k &    \multicolumn{1}{c}{\textbf{2}} & \multicolumn{1}{c}{\textbf{3}} & \multicolumn{1}{c}{\textbf{4}} & \multicolumn{1}{c}{\textbf{5}} & \multicolumn{1}{c}{\textbf{6}} & \multicolumn{1}{c}{\textbf{7}} & \multicolumn{1}{c}{\textbf{8}} & \multicolumn{1}{c}{\textbf{9}} & \multicolumn{1}{c}{\textbf{10}}  \\
-   \toprule
-  \multirow{5}{*}{\rotatebox[origin=c]{90}{\textbf{live-csmacd}}}
-     & \textbf{10} & 2.7\cmark & 3.8\cmark & 4.3\cmark & 5.2\cmark & 6.4\cmark & 5.8\cmark & 8.9\cmark & 7.9\cmark & 9.6\cmark \\
-     & \textbf{15} & 11.2\cmark & 33.5\cmark & 38.3\cmark & 53.1\cmark & 85.3\cmark & 121.6\cmark & 212.8\cmark & 281.9\cmark & 326.0\cmark \\
-     & \textbf{20} & 26.8\cmark & 110.4\cmark & 266.5\cmark & 723.9\cmark & 1774.1\cmark & 2272.7\cmark & 3813.9\cmark & 5530.0\cmark & 5204.1\cmark \\
-     & \textbf{25} & 83.4\cmark & 795.5\cmark & 2368.0\cmark & 5116.6\cmark & $-$ & $-$ & $-$ & $-$ & $-$ \\
-     & \textbf{30} & 305.8\cmark & 2851.4\cmark & $-$ & $-$ & $-$ & $-$ & $-$ & $-$ & $-$ \\
-%    \multicolumn{1}{|c|}{} &    U &  \multicolumn{2}{|c|}{} & \multicolumn{2}{|c|}{} & \multicolumn{2}{|c|}{} & \multicolumn{2}{|c|}{} & \multicolumn{2}{|c|}{} & \multicolumn{2}{|c|}{} & \multicolumn{2}{|c|}{} & \multicolumn{2}{|c|}{} & \multicolumn{2}{|c|}{}   \\
-   \bottomrule
-  \cline{1-11}
-\end{tabular}
-\caption {Time (s) required to check the property of the CSMA/CD Protocol. A \cmark\
-  indicates the property is satisfied, a \xmark\ indicates that a counterexample
-  was found. Blank entries indicate no result after two hours.}
-\label{table:csmacd-results}
-\end{table}
-
-Table~\ref{table:csmacd-results} contains the results from the CSMA/CD benchmark
-on both \aez\ and ta2smt. While running this experiment we discovered a
-previously unknown flaw in the \aez\ encoding of the broadcast synchronization
-constraints. Therefore the results are not directly comparable, as ta2smt must
-explore the entire search space before returning a result of \textbf{sat}, while
-the \aez\ algorithm can terminate after finding one (erroneous) counterexample.
-
-In addition, the version of the CSMA/CD benchmark presented here is slightly
-different from the benchmark that has been used in benchmarks of Uppaal and
-other TA solvers. We noticed that the common benchmark lacked the ability for
-processes to correctly recover from a collision. In essence, once a collision
-occurs, one process begins transmitting, while the other must wait in the retry
-state until the transmission is complete. However a full transmission takes 808
-time units to complete, and the retry state has an invariant requiring that
-processes in the state transition after at most 52 seconds. The only way for a
-process to remain in the retry state longer is if another collision occurs,
-which of course also forces the transmitting process to restart. Because there
-were no other options for the process stuck in the retry state, the transmitting
-process could never finish a transmission. We modified the benchmark by adding a
-new transition whose source and destination state are the retry state. It can
-only be taken if the bus process sends a `busy' signal (one-to-one), which the
-bus processes is only allowed to do if a process has been transmitting for over
-26 units of time. This transition resets the clock that would require the
-process to leave the retry state, thus allowing it to remain in the retry state
-for the full 808 time units required for a successful transition. Although our
-benchmark is different from those previously used, and therefore our results
-cannot be compared with the CSMA/CD benchmark for Uppaal, we have created a more
-accurate model of a real-world transmission protocol, and thus a more useful
-tool for assessing how our algorithm would perform with a real-world problem.
+trace for 8 processes, and so on.
 
 \section{Token Ring}\label{evaluation-token}
 
@@ -2187,25 +2176,182 @@ r  r
    \hline
   \cline{1-11}
 \end{tabular}
-\caption {Time (s) required to check the property of the Token Ring. A \cmark\
-  indicates the property is satisfied, a \xmark\ indicates that a counterexample
-  was found. Blank entries indicate no result after two hours.}
+\caption [Time required to check the property of the Token Ring.]{Time required
+  to check the property of the Token Ring. A \cmark\ indicates the property is
+  satisfied, a \xmark\ indicates that a counterexample was found. Blank entries
+  indicate no result after two hours.}
 \label{table:token-results}
 \end{table*}
 
-Table~\ref{table:token-results} contains the results of the token ring tests. Although
-the time taken is not as large as the other tests, we can still see a clear
-pattern emerge. We used this test as an opportunity to extend the maximum time
-bound used, and as shown above the general trend of ta2smt scaling more
+Table~\ref{table:token-results} contains the results of the token ring tests.
+Although the time taken is not as large as the Fischer tests, we can still see a
+clear pattern emerge. We used this test as an opportunity to extend the maximum
+time bound used, and as shown above the general trend of ta2smt scaling more
 efficiently than \aez\ continues past a bound of 30. Although the initial
 results with a bound of 10 are practically equivalent, by the time we reach a
-bound of 40 ta2smt starts to perform three times faster than \aez.
+bound of 40 ta2smt starts to perform at least three times faster than \aez.
+
+\section{CSMA/CD}\label{evaluation-csma}
+
+The CSMA/CD (Carrier Sense Multiple Access/Collision Detection) protocol is a
+well known protocol for allowing multiple agents to share a communication
+channel, and was popularized by its inclusion in the Ethernet standard. The
+protocol includes 1 process to manage a shared communication bus, as well as a
+number of processes that wish to obtain exclusive access to the bus in order to
+send a message. When two processes attempt to send at the same time, the bus
+process detects the collision and uses the broadcast synchronization primitive
+to force the processes to wait a randomized amount of time before attempting to
+communicate again. While an agent is sending over the bus, the bus process can
+send a `busy' signal to the other agents, in order to simulate the agents
+listening to the bus and detecting a communication in-progress.
+
+\begin{align*}
+  \text{\textbf{live-csma}} := & \mathcal{G}_{(0,\infty)}(P1.begin\_send \rightarrow (\neg collision\_after\_deadline)) \\
+  P1.begin\_send := & (\neg P1.send) \land (P1.send\ \mathcal{U}_{(0,inf)} \top) \\
+  P1.collision\_after\_deadline := & \mathcal{G}_{(0,52]}(P1.send \land (P1.send\ \mathcal{U}_{[0,inf)} (P1.send \land P2.send))) \\
+\end{align*}
+This protocol was tested to ensure that a collision is always detected before a
+certain amount of time has passed.
+The property \textbf{live-csma} asserts that after process 1 has been sending
+for 52 units of time, process 2 cannot begin sending until process 1 has finished.
+
+The version of the CSMA/CD benchmark presented here is slightly
+different from the benchmark that has been used in benchmarks of Uppaal and
+other TA solvers. We noticed that the common benchmark lacked the ability for
+processes to correctly recover from a collision. In essence, once a collision
+occurs, one process begins transmitting, while the other must wait in the retry
+state until the transmission is complete. However a full transmission takes 808
+time units to complete, and the retry state has an invariant requiring that
+processes in the state transition after at most 52 seconds. The only way for a
+process to remain in the retry state longer is if another collision occurs,
+which of course also forces the transmitting process to restart. Because there
+were no other options for the process stuck in the retry state, the transmitting
+process could never finish a transmission. We modified the benchmark by adding a
+new transition whose source and destination state are the retry state. It can
+only be taken if the bus process sends a `busy' signal (one-to-one), which the
+bus processes is only allowed to do if a process has been transmitting for over
+26 units of time. This transition resets the clock that would require the
+process to leave the retry state, thus allowing it to remain in the retry state
+for the full 808 time units required for a successful transition. Although our
+benchmark is different from those previously used, and therefore our results
+cannot be compared with the CSMA/CD benchmark for Uppaal, we have created a more
+accurate model of a real-world transmission protocol, and thus a more useful
+tool for assessing how our algorithm would perform with a real-world problem.
+
+\begin{figure}[h]
+  \centering
+  \includegraphics[width=0.6\textwidth]{csma-bus}
+  \caption{CSMA Bus Automaton}
+  \label{fig:csma-bus}
+\end{figure}
+
+Figure~\ref{fig:csma-bus} shows the TA diagrams used for the bus process. We have shown in
+bold the new transition that was added to the standard version to improve the
+quality of the benchmark. To simulate the ability of the sending processes to
+detect when the bus is already in use, we have added a new transition to the bus
+process that allows it to send a \textbf{busy} signal to another process when it
+is in the active state and at least 26 time units have passed since the
+beginning of the current transmission (26 is used to represent the delay for the
+signal to propagate to other processes).
+
+\begin{figure}[h]
+  \centering
+  \includegraphics[width=0.7\textwidth]{csma-sender}
+  \caption{CSMA Sender Automaton}
+  \label{fig:csma-sender}
+\end{figure}
+
+Figure~\ref{fig:csma-sender} shows the diagram for the sending process. Again
+the new additions are shown in bold. Note that each sending process has its own
+unique clock, so that each process can reset its clock independently. In the
+diagram for the sending processes we have added three new transitions. The first
+keeps the TA in the waiting state, and synchronizes using the \textbf{cd} signal
+(short for ``collision detected''). This allows the process to choose whether to
+remain in the waiting state or move to the retry state when it receives this
+broadcast synchronization signal. The other two new transitions concern the
+added \textbf{begin} synchronization channel. The first allows a waiting process
+that wishes to transmit to detect a transmission in-progress and transition
+directly into the retry state. The final, and most crucial transition allows a
+process in the retry state to detect that the bus is still busy, and reset its
+clock. This allows it to remain in the retry state for the full 808 time units
+needed for a complete transmission.
+
+While running this experiment we discovered a previously unknown flaw in the
+\aez\ encoding of the broadcast synchronization constraints. Therefore the
+results are not directly comparable, as ta2smt must explore the entire search
+space before returning a result of \textbf{sat}, while the \aez\ algorithm can
+terminate after finding one (erroneous) counterexample. Rather than present
+incomparable results, we have decided to instead present two runs of the ta2smt
+encoding with different liveness and edge constraints.
+
+\begin{table}[t]
+\footnotesize
+%\setstretch{0.6}
+%\small
+\center
+\begin{tabular}{
+r  r  r
+r  r  r
+r  r  r
+r  r
+}
+\toprule
+%\cline{3-11}
+%\cline{3-11}
+  \multicolumn{2}{c}{} &   \multicolumn{9}{c}{TACK ta2smt (Strong Transition
+                         Liveness, Right-Closed Edges)}  \\
+  \midrule
+  \multicolumn{2}{c}{}  &    \multicolumn{9}{c}{$n$}  \\
+  \midrule
+\multicolumn{1}{c}{}  & k &    \multicolumn{1}{c}{\textbf{2}} & \multicolumn{1}{c}{\textbf{3}} & \multicolumn{1}{c}{\textbf{4}} & \multicolumn{1}{c}{\textbf{5}} & \multicolumn{1}{c}{\textbf{6}} & \multicolumn{1}{c}{\textbf{7}} & \multicolumn{1}{c}{\textbf{8}} & \multicolumn{1}{c}{\textbf{9}} & \multicolumn{1}{c}{\textbf{10}}  \\
+%\cline{2-11}
+%   \hline
+\toprule
+  \multirow{5}{*}{\rotatebox[origin=c]{90}{\textbf{live-csmacd}}}
+     & \textbf{10} & 2.4 & 3.5 & 4.3 & 5.1 & 5.2 & 5.8 & 8.8 & 7.8 & 9.5 \\
+     & \textbf{15} & 11.0 & 31.2 & 37.2 & 52.7 & 93.6 & 121.7 & 208.7 & 275.4 & 324.0 \\
+     & \textbf{20} & 27.1 & 109.5 & 263.5 & 721.5 & 1778.3 & 2206.1 & 3616.7 & 5097.3 & 5068.9 \\
+     & \textbf{25} &  \\
+     & \textbf{30} &  \\
+  \toprule
+  \multicolumn{2}{c}{}  &   \multicolumn{9}{c}{TACK ta2smt (Unrestricted
+                          Liveness, Open Edges)}  \\
+    \midrule
+  \multicolumn{2}{c}{}  &    \multicolumn{9}{c}{$n$}  \\
+  \midrule
+\multicolumn{1}{c}{}  & k &    \multicolumn{1}{c}{\textbf{2}} & \multicolumn{1}{c}{\textbf{3}} & \multicolumn{1}{c}{\textbf{4}} & \multicolumn{1}{c}{\textbf{5}} & \multicolumn{1}{c}{\textbf{6}} & \multicolumn{1}{c}{\textbf{7}} & \multicolumn{1}{c}{\textbf{8}} & \multicolumn{1}{c}{\textbf{9}} & \multicolumn{1}{c}{\textbf{10}}  \\
+   \toprule
+  \multirow{5}{*}{\rotatebox[origin=c]{90}{\textbf{live-csmacd}}}
+     & \textbf{10} & 2.8 & 3.9 & 5.0 & 5.3 & 8.1 & 9.8 & 9.2 & 11.8 & 10.5 \\
+     & \textbf{15} & 14.0 & 44.2 & 55.6 & 72.7 & 198.2 & 219.4 & 209.7 & 469.9 & 367.2 \\
+     & \textbf{20} & 64.3 & 245.4 & 543.9 & 1188.7 & 2764.7 & 2037.6 & 4110.6 & $-$ & $-$ \\
+     & \textbf{25} &  \\
+     & \textbf{30} &  \\
+%    \multicolumn{1}{|c|}{} &    U &  \multicolumn{2}{|c|}{} & \multicolumn{2}{|c|}{} & \multicolumn{2}{|c|}{} & \multicolumn{2}{|c|}{} & \multicolumn{2}{|c|}{} & \multicolumn{2}{|c|}{} & \multicolumn{2}{|c|}{} & \multicolumn{2}{|c|}{} & \multicolumn{2}{|c|}{}   \\
+   \bottomrule
+  \cline{1-11}
+\end{tabular}
+\caption[Time required to check the property of the CSMA/CD Protocol]{Time
+  required to check the property of the CSMA/CD Protocol. A \cmark\ indicates
+  the property is satisfied, a \xmark\ indicates that a counterexample was
+  found. Blank entries indicate no result after two hours.}
+\label{table:csmacd-results}
+\end{table}
+
+In Table~\ref{table:csmacd-results} we see the first run, which follows our
+convention of using Strong Transition Liveness and Right-Closed edges. The
+second run, however uses Unrestricted Liveness and Open edges. This means that
+the second run has many more possibilities (valid traces) to consider, and we
+would expect it to take a longer amount of time to verify the property. Once
+again for small problem sizes the difference is minute, however although not as
+drastic as the difference between \aez\ and ta2smt, there is still a significant
+difference at higher bounds and higher numbers of agents.
 
 
 \chapter{Conclusion}\label{conclusion}
 
 We have presented a novel approach for encoding networks of Timed Automata
-directly into BitVector logic, suitable for solving by state of the art SMT
+directly into BitVector logic, suitable for solving by state-of-the-art SMT
 solvers. Building off of the work begun with the development of the TACK solver,
 we retain TACK's approach of encoding MITL properties to be verified over the
 network, while creating a more efficient model for the encoding of the network
