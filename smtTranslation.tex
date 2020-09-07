@@ -208,16 +208,18 @@ Temporal Logic (LTL) with Interval constraints on the `until' operator. While
 powerful, standard MTL properties are undecidable in general for infinite
 traces~\cite{bouyer09}. To make MTL tractable, the subset MITL was proposed in
 1991~\cite{Alur91thebenefits}, which offers decidable continuous semantics for
-TAs. Examples of MITL solvers include a tool developed by Kindermann et
-al.~\cite{kindermann13}, which relies on a further subset
-$\text{MITL}_{0,\infty}$ for property validation, and currently supports both
-finite and lasso-shaped bounded traces. Another is TACK, which was developed by
-Menghi et al.~\cite{tack20} and has implemented a bounded model checker for
-lasso-shaped infinite traces over the full MITL logic. To improve the speed of
-the verification process, TACK encodes the TA and property to be verified into
-BitVector logic, which is supported by the standardized SMT-LIB2
-language.~\cite{baresi15,baresi16} To avoid the incompleteness of the naive
-lasso encoding shown by Kindermann~\cite{kindermann12}, both tools use a
+TAs. MITL is valuable both for its \emph{continuous} time semantics, where the
+value of a property can be known at every position $r \in \mathcal{R^{+}}$, and
+for its ability to capture expressive and complex properties. Examples of MITL
+solvers include a tool developed by Kindermann et al.~\cite{kindermann13}, which
+relies on a further subset $\text{MITL}_{0,\infty}$ for property validation, and
+currently supports both finite and lasso-shaped bounded traces. Another is TACK,
+which was developed by Menghi et al.~\cite{tack20} and has implemented a bounded
+model checker for lasso-shaped infinite traces over the full MITL logic. To
+improve the speed of the verification process, TACK encodes the TA and property
+to be verified into BitVector logic, which is supported by the standardized
+SMT-LIB2 language.~\cite{baresi15,baresi16} To avoid the incompleteness of the
+naive lasso encoding shown by Kindermann~\cite{kindermann12}, both tools use a
 region-based encoding of the clock values. This is paired with a ``non-Zeno''
 requirement, so that the infinite traces span an infinite amount of time. In the
 following chapter we will summarize the background and work accomplished in the
@@ -471,11 +473,11 @@ In Figure~\ref{fig:trace-min} we can see a trace of the Timed Automaton defined
 in Figure~\ref{fig:example-big}, which has been given an index of 1. To prevent
 the value of $t[i]$ being undefined at position $0$, the value of $t[i]$
 corresponds to the transition taken in the following time position. However for
-clarity in the traces shown here, the values of $t[1]$ have been shifted to the
-right by one position, so that the active transition is placed over the position
-in time where the transition actually occurs. At the top of the trace $l[1]$
-tracks the currently active state of the timed automaton. In this simple trace
-the automaton begins in state $q_{1}$, transitions to $q_{2}$, remains in
+clarity in the traces shown here, the values of $t[1]$ and $\delta$ have been
+shifted to the right by half of one position, so that the active transition is
+placed in between its source and destination states. At the top of the trace
+$l[1]$ tracks the currently active state of the timed automaton. In this simple
+trace the automaton begins in state $q_{1}$, transitions to $q_{2}$, remains in
 $q_{2}$ for another position, and then transitions to $q_{3}$. Below the active
 state we show the active values of both the variable $n$ and the clock $x$ at
 the given positions. The value $\delta$ shows the amount of time that passes
@@ -539,8 +541,8 @@ edge is right-closed.
 
 Figure~\ref{fig:trace-full} shows the same example trace as before, but with the
 addition of the edge variable. Like the transitions, it is shifted to the right
-by one position for ease of viewing. Notice that when transition $t_{3}$ is
-taken, the edge is left-closed, as is required by the invariant. The value of
+by half of one position for ease of viewing. Notice that when transition $t_{3}$
+is taken, the edge is left-closed, as is required by the invariant. The value of
 the edge variable is not shown during the null transition, however during a null
 transition either value is equivalent. We now revise the notion of a trace to
 include this term.
@@ -556,7 +558,7 @@ automata traces of infinite length can be efficiently verified against a
 property. Since TA traces are infinite in length, we restrict ourselves to
 traces of the form
 \(s_0 s_1\ldots s_{l-1}{(s_l s_{l+1}\ldots s_{k-1}s_k)}^\omega\), where every
-$s = (l,v,v_{var},\delta,t)$. These ``lasso-shaped'' traces consist of an
+$s = (l,v,v_{var},\delta,t,edge)$. These ``lasso-shaped'' traces consist of an
 initial sequence of states up until \(s_{l-1}\), followed by a loop that can be
 repeated an infinite amount of times to form the full trace. Since the beginning
 of the loop is allowed to occur anywhere within the sequence, the only variable
@@ -2269,7 +2271,7 @@ keeps the TA in the waiting state, and synchronizes using the \textbf{cd} signal
 (short for ``collision detected''). This allows the process to choose whether to
 remain in the waiting state or move to the retry state when it receives this
 broadcast synchronization signal. The other two new transitions concern the
-added \textbf{begin} synchronization channel. The first allows a waiting process
+added \textbf{busy} synchronization channel. The first allows a waiting process
 that wishes to transmit to detect a transmission in-progress and transition
 directly into the retry state. The final, and most crucial transition allows a
 process in the retry state to detect that the bus is still busy, and reset its
@@ -2286,7 +2288,7 @@ encoding with different liveness and edge constraints.
 
 \begin{table}[t]
 \footnotesize
-%\setstretch{0.6}
+\setstretch{0.6}
 %\small
 \center
 \begin{tabular}{
@@ -2308,11 +2310,11 @@ r  r
 %   \hline
 \toprule
   \multirow{5}{*}{\rotatebox[origin=c]{90}{\textbf{live-csmacd}}}
-     & \textbf{10} & 2.4 & 3.5 & 4.3 & 5.1 & 5.2 & 5.8 & 8.8 & 7.8 & 9.5 \\
-     & \textbf{15} & 11.0 & 31.2 & 37.2 & 52.7 & 93.6 & 121.7 & 208.7 & 275.4 & 324.0 \\
-     & \textbf{20} & 27.1 & 109.5 & 263.5 & 721.5 & 1778.3 & 2206.1 & 3616.7 & 5097.3 & 5068.9 \\
-     & \textbf{25} &  \\
-     & \textbf{30} &  \\
+     & \textbf{10} & 2.4\cmark & 3.5\cmark & 4.3\cmark & 5.1\cmark & 5.2\cmark & 5.8\cmark & 8.8\cmark & 7.8\cmark & 9.5\cmark \\
+     & \textbf{15} & 11.0\cmark & 31.2\cmark & 37.2\cmark & 52.7\cmark & 93.6\cmark & 121.7\cmark & 208.7\cmark & 275.4\cmark & 324.0\cmark \\
+     & \textbf{20} & 27.1\cmark & 109.5\cmark & 263.5\cmark & 721.5\cmark & 1778.3\cmark & 2206.1\cmark & 3616.7\cmark & 5097.3\cmark & 5068.9\cmark \\
+     & \textbf{25} & 82.7\cmark & 813.7\cmark & 2325.2\cmark & 4772.4\cmark & $-$ & $-$ & $-$ & $-$ & $-$ \\
+     & \textbf{30} & 296.5\cmark & 2882.0\cmark & $-$ & $-$ & $-$ & $-$ & $-$ & $-$ & $-$ \\
   \toprule
   \multicolumn{2}{c}{}  &   \multicolumn{9}{c}{TACK ta2smt (Unrestricted
                           Liveness, Open Edges)}  \\
@@ -2322,11 +2324,11 @@ r  r
 \multicolumn{1}{c}{}  & k &    \multicolumn{1}{c}{\textbf{2}} & \multicolumn{1}{c}{\textbf{3}} & \multicolumn{1}{c}{\textbf{4}} & \multicolumn{1}{c}{\textbf{5}} & \multicolumn{1}{c}{\textbf{6}} & \multicolumn{1}{c}{\textbf{7}} & \multicolumn{1}{c}{\textbf{8}} & \multicolumn{1}{c}{\textbf{9}} & \multicolumn{1}{c}{\textbf{10}}  \\
    \toprule
   \multirow{5}{*}{\rotatebox[origin=c]{90}{\textbf{live-csmacd}}}
-     & \textbf{10} & 2.8 & 3.9 & 5.0 & 5.3 & 8.1 & 9.8 & 9.2 & 11.8 & 10.5 \\
-     & \textbf{15} & 14.0 & 44.2 & 55.6 & 72.7 & 198.2 & 219.4 & 209.7 & 469.9 & 367.2 \\
-     & \textbf{20} & 64.3 & 245.4 & 543.9 & 1188.7 & 2764.7 & 2037.6 & 4110.6 & $-$ & $-$ \\
-     & \textbf{25} &  \\
-     & \textbf{30} &  \\
+     & \textbf{10} & 2.8\cmark & 3.9\cmark & 5.0\cmark & 5.3\cmark & 8.1\cmark & 9.8\cmark & 9.2\cmark & 11.8\cmark & 10.5\cmark \\
+     & \textbf{15} & 14.0\cmark & 44.2\cmark & 55.6\cmark & 72.7\cmark & 198.2\cmark & 219.4\cmark & 209.7\cmark & 469.9\cmark & 367.2\cmark \\
+     & \textbf{20} & 64.3\cmark & 245.4\cmark & 543.9\cmark & 1188.7\cmark & 2764.7\cmark & 2037.6\cmark & 4110.6\cmark & $-$ & $-$ \\
+     & \textbf{25} & 205.9\cmark & 2362.4\cmark & 3753.4\cmark & 6535.8\cmark & $-$ & $-$ & $-$ & $-$ & $-$ \\
+     & \textbf{30} & 559.7\cmark & 5921.7\cmark & $-$ & $-$ & $-$ & $-$ & $-$ & $-$ & $-$ \\
 %    \multicolumn{1}{|c|}{} &    U &  \multicolumn{2}{|c|}{} & \multicolumn{2}{|c|}{} & \multicolumn{2}{|c|}{} & \multicolumn{2}{|c|}{} & \multicolumn{2}{|c|}{} & \multicolumn{2}{|c|}{} & \multicolumn{2}{|c|}{} & \multicolumn{2}{|c|}{} & \multicolumn{2}{|c|}{}   \\
    \bottomrule
   \cline{1-11}
@@ -2345,7 +2347,11 @@ the second run has many more possibilities (valid traces) to consider, and we
 would expect it to take a longer amount of time to verify the property. Once
 again for small problem sizes the difference is minute, however although not as
 drastic as the difference between \aez\ and ta2smt, there is still a significant
-difference at higher bounds and higher numbers of agents.
+difference at higher bounds and higher numbers of agents. For the problem sizes
+we have tested, the unrestricted runs can take up to twice as long as the runs
+restricted by strong transition liveness and right-closed edges. This is useful
+information for users weighing the benefits of a broader search against the
+extra time costs.
 
 
 \chapter{Conclusion}\label{conclusion}
