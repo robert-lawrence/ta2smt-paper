@@ -96,7 +96,7 @@ MITL durante la codifica della rete di TA direttamente in SMT-LIB2, utilizzando
 sia la logica BitVector che la logica delle funzioni a valore reale. Il nostro
 principale risolutore SMT mirato è lo Z3 di Microsoft, che supporta molti
 formati standardizzati, compreso SMT-LIB2 e ha un forte supporto per diverse
-logiche SMT. Vi presentiamo diverse ottimizzazioni che ci permettono di
+logiche SMT\@. Vi presentiamo diverse ottimizzazioni che ci permettono di
 migliorare in modo significativo la codifica CLTLoc, di correggere le
 carenze nella codifica originale.
 
@@ -147,14 +147,28 @@ BitVectors to track the active state of the TA, instead relying on the active
 transition to carry this information.
 
 In this paper, we will first present the current state-of-the-art for bounded
-model checking (Chapter 2), followed by an in-depth description of both the required
+model checking, followed by an in-depth description of both the required
 preliminary knowledge and the specific implementation of the TACK bounded model
-checker (Chapter 3). We will then present our novel contribution to the problem
+checker (Chapter 2). We will then present our novel contribution to the problem
 of encoding the TA network into a form suitable for an SMT bounded model checker
-(Chapter 4). Afterwords we will present our experimental results (Chapter 5) as
-well as summary remarks (Chapter 6).
+(Chapter 3). Afterwords we will present our experimental results (Chapter 4) as
+well as summary remarks (Chapter 5).
 
-\chapter{State of the Art}\label{stateoftheart}
+\chapter{Preliminaries}\label{prelims}
+
+In this chapter we present the current TACK bounded model checking procedure,
+along with the required prerequisite knowledge. We begin with a discussion on
+the current state-of-the-art in model checking, followed by a discussion on
+Timed Automata, giving an intuitive introduction to the topic before formally
+defining the TA used in the rest of the paper. We then discuss Bounded Model
+Checking, formally defining a \emph{trace} of a TA network and presenting an
+illustrative example trace. We then discuss the two temporal logics used in the
+TACK encoding, \cltloc\ and MITL\@. With the theoretical background complete, we
+move on to discussing the TACK encoding itself, followed by an summary of
+BitVector logic and \aez, the tool used by TACK to convert \cltloc\ formulas
+into BitVector form.
+
+\section{State of the Art}\label{stateoftheart}
 
 
 For many years, model checking was performed using Binary Decision Diagrams
@@ -225,19 +239,6 @@ requirement, so that the infinite traces span an infinite amount of time. In the
 following chapter we will summarize the background and work accomplished in the
 TACK solver, before then presenting our contribution to the TACK verification
 tool.
-
-\chapter{Preliminaries}\label{prelims}
-
-In this chapter we present the current TACK bounded model checking procedure,
-along with the required prerequisite knowledge. We begin with a discussion on
-Timed Automata, giving an intuitive introduction to the topic before
-formally defining the TA used in the rest of the paper. We then discuss Bounded
-Model Checking, formally defining a \emph{trace} of a TA network and presenting
-an illustrative example trace. We then discuss the two temporal logics used in
-the TACK encoding, \cltloc\ and MITL. With the theoretical background complete,
-we move on to discussing the TACK encoding itself, followed by an summary of
-BitVector logic and \aez, the tool used by TACK to convert \cltloc\ formulas
-into BitVector form.
 
 \section{Timed Automata}\label{timed-automata}
 
@@ -1374,11 +1375,11 @@ throughout the trace.
 \begin{tabular}{c  c  c}
   \multicolumn{3}{c}{Initialization and Progression Constraints} \\
   \midrule
-  \(\phi_1 := \underset{i \in [1,N]}{\BitAnd} \overleftarrow{1}_{[1]} = \overleftarrow{state_{q_{i}^{0}}}^{[0]}\)
-  & \(\phi_2 := \underset{n \in Int}{\BitAnd} \overleftarrow{v_{var}^{0}(n)} = \overleftarrow{var_{n}(0)}\)
+  \(\phi_1 := \underset{i \in [1,N]}{\land} \overleftarrow{1}_{[1]} = \overleftarrow{state_{q_{i}^{0}}}^{[0]}\)
+  & \(\phi_2 := \underset{n \in Int}{\land} \overleftarrow{v_{var}^{0}(n)} = \overleftarrow{var_{n}(0)}\)
   & \(\phi_3 := \underset{x \in X}{\bigwedge} x(0) = 0\) \\
   \midrule
-  \(\phi_4 := \underset{i \in [0,k+1]}{\bigwedge} \delta(i) > 0\) & \(\phi_5 := \underset{t \in \mathcal{T}}{\BitAnd} (\overleftarrow{trans_t}^{[k:0]} \Rightarrow
+  \(\phi_4 := \underset{i \in [0,k+1]}{\bigwedge} \delta(i) > 0\) & \(\phi_5 := \underset{t \in \mathcal{T}}{\land} (\overleftarrow{trans_t}^{[k:0]} \Rightarrow
   \overleftarrow{state_{t_+}}^{[k+1:1]})\)&
 
                                                                     \(\phi_6 :=  \{\phi_{wtl}\ |\ \phi_{stl}\ |\ \top\}\)
@@ -1386,17 +1387,17 @@ throughout the trace.
   \midrule
   \multicolumn{3}{c}{
   \(\phi_7 := \underset{x \in X}{\bigwedge}\ \underset{j \in [0,k]}{\bigwedge}\ \Big( \underset{t \in \mathcal{R}(x)}{\BitAnd} {(\BitNeg\overleftarrow{trans_{t}})}^{[j]} \Big)
-  \Rightarrow x(j+1) = x(j) + \delta(j)\)} \\
+  \rightarrow x(j+1) = x(j) + \delta(j)\)} \\
   \midrule
   \multicolumn{3}{c}{
   \(\phi_8 := \underset{n \in Int}{\BitAnd}  \underset{t \in assign(n)}{\BitAnd} (\BitNeg\ \overleftarrow{trans_{t}}^{[k:0]}) \Rightarrow \underset{j \in [1,\lambda(n)]}{\BitAnd}
-  (\overleftarrow{v_{n}b_j}^{[k:0]} = \overleftarrow{v_{n}b_j}^{[k+1:1]}) \)} \\
+  (\overleftarrow{v_{n}b_j}^{[k:0]} \Leftrightarrow \overleftarrow{v_{n}b_j}^{[k+1:1]}) \)} \\
   \midrule
 \multicolumn{3}{c}{\(\phi_{wtl} :=  \overleftarrow{0}_{[k+2]} \neq \Big(\overleftarrow{inloop}\ \BitAnd\ (\underset{i \in [1,N]}{\BitOr}\ \BitNeg\ (\underset{q \in Q_{i}}{\BitOr} \overleftarrow{trans_{null_{q}}}))\Big) \)} \\
   \midrule
 \multicolumn{3}{c}{\(\phi_{stl} := \underset{i \in [1,N]}{\land} \overleftarrow{0}_{[k+2]} \neq \Big(\overleftarrow{inloop}\ \BitAnd\ \BitNeg\ (\underset{q \in Q_{i}}{\BitOr} \overleftarrow{trans_{null_{q}}})\Big) \)} \\
   \midrule
-  \multicolumn{3}{c}{\( \phi_{Init} := ( \phi_{1} \BitAnd \phi_{2} \BitAnd \phi_{5} \BitAnd \phi_{8} =\BitNeg\overleftarrow{0}_{[k{+}2]} ) \land \phi_{3} \land \phi_{4} \land \phi_{6} \land \phi_{7}\)}
+  \multicolumn{3}{c}{\( \phi_{Init} := \phi_{1} \land \phi_{2} \land \phi_{3} \land  \land \phi_{4} \land \phi_{5} \land \phi_{6} \land \phi_{7} \land ( \phi_{8} =\BitNeg\overleftarrow{0}_{[k{+}2]} )\)}
   \\
 \bottomrule
 \end{tabular}
@@ -1511,11 +1512,12 @@ value of \(n\) remains unchanged.
 
 As a quick review, transitions consist of a source and destination state, a
 synchronization action, as well as (possibly empty) sets of clock constraints,
-variable constraints, clock assignments, and variable assignments. In section
-\ref{constraints-init} on initialization and progression, \(\phi_6\) was defined
-to ensure that the source and destination states were implemented correctly -
-that the destination of one transition is the source of the next. We now
-encode the guard and assignment constraints of every transition in the TA network.
+variable constraints, clock assignments, and variable assignments. In
+Section~\ref{constraints-init} on initialization and progression, \(\phi_6\) was
+defined to ensure that the source and destination states were implemented
+correctly - that the destination of one transition is the source of the next. We
+now encode the guard and assignment constraints of every transition in the TA
+network.
 
 
 \emph{Property $\phi_{9}$} We will first consider the transition guards. Each
@@ -1604,11 +1606,12 @@ Sync Constraints \\
 \midrule
 \(\phi_{16} := \underset{t \in T:t_\epsilon = \alpha\#}{\BitAnd} \overleftarrow{trans_t} \Rightarrow \neg (\underset{t' \in T:t_\epsilon = \alpha\#\land t' \neq t}{\BitOr} \overleftarrow{trans_{t'}}) \) \\
 \midrule
-\(\phi_{17} := \underset{t \in T_{i}:t_\epsilon = \alpha@}{\underset{i \in [1,N]}{\BitAnd}} \overleftarrow{trans_t} \Rightarrow (\underset{t' \in T_{j}: t_\epsilon = \alpha\#}{\underset{j \in [1,N]}{\BitOr}} \overleftarrow{trans_{t'}} \BitAnd (\overleftarrow{edge_{i}^{RC}} \Leftrightarrow \overleftarrow{edge_{j}^{RC}})) \)
+\(\phi_{17} := \underset{t \in T_{i}:t_\epsilon = \alpha @}{\underset{i \in [1,N]}{\BitAnd}} \overleftarrow{trans_t} \Rightarrow (\underset{t' \in T_{j}: t_\epsilon = \alpha\#}{\underset{j \in [1,N]}{\BitOr}} \overleftarrow{trans_{t'}} \BitAnd (\overleftarrow{edge_{i}^{RC}} \Leftrightarrow \overleftarrow{edge_{j}^{RC}})) \)
   \\
 \midrule
 \(\phi_{18} := \underset{\alpha \in Act}{\bigwedge}\ \underset{l \in [0,k+2]}{\underset{i \in [1,|\mathcal{A}|]}{\bigwedge}} (\underset{t_\epsilon = \alpha\#}{\underset{t \in T_i:}{\bigvee}} \overleftarrow{trans_t}^{[l]}) \rightarrow \) \\
-\((\underset{j \neq i}{\underset{j \in [1,k]:}{\bigwedge}} (\underset{t'_\epsilon = \alpha@}{\underset{t' \in T_j: }{\bigvee}} \overleftarrow{state_{t'_-}}^{[l]} \land \sigma_{\delta}(l,t'_{\gamma_{c}})  \land \mu(l,t_{\gamma_v})) \rightarrow \underset{t'_\epsilon = \alpha@}{\underset{t' \in T_j:}{\bigvee}} \overleftarrow{trans_{t'}}^{[l]}) \) \\
+\((\underset{j \neq i}{\underset{j \in [1,k]:}{\bigwedge}} (\underset{t'_\epsilon = \alpha @}{\underset{t' \in T_j: }{\bigvee}} \overleftarrow{state_{t'_-}}^{[l]} \land \sigma_{\delta}(l,t'_{\gamma_{c}})  \land \mu(l,t_{\gamma_v})) \rightarrow \underset{t'_\epsilon = \alpha @}{\underset{t' \in T_j:}{\bigvee}} \overleftarrow{trans_{t'}}^{[l]}) \)
+  \\
 \midrule
 \(\phi_{sync} := (\phi_{14} \BitAnd \phi_{15} \BitAnd \phi_{16} \BitAnd \phi_{17} =\ \BitNeg \overleftarrow{0} ) \land \phi_{18} \)
 
@@ -1617,9 +1620,9 @@ Sync Constraints \\
 \label{table:constraints-sync}
 \end{table}
 
-The synchronization constraints capture the semantics defined in table
-\ref{table:sync-def}. Formula $\phi_{14}$ and $\phi_{15}$ capture the constraints
-for one-to-one synchronization, while the others cover broadcast
+The synchronization constraints capture the semantics defined in
+Table~\ref{table:sync-def}. Formula $\phi_{14}$ and $\phi_{15}$ capture the
+constraints for one-to-one synchronization, while the others cover broadcast
 synchronization.
 
 \emph{Properties $\phi_{14}-\phi_{15}$} The first formula in this group requires
@@ -1637,8 +1640,8 @@ different semantics of broadcast synchronization. $\phi_{16}$ requires that when
 a transition with the event $\alpha\#$ (broadcast send) is active, no other
 transition with the same event may be active. The difference from $\phi_{14}$ is
 that there is no requirement for an active transition labeled with the
-$\alpha@$ (broadcast receive) event. $\phi_{17}$ requires that when a transition
-with the event $\alpha@$ is active, there exists at least one active transition
+$\alpha @$ (broadcast receive) event. $\phi_{17}$ requires that when a transition
+with the event $\alpha @$ is active, there exists at least one active transition
 with the event $\alpha\#$ and the same edge. Note that multiple transitions are
 allowed to receive the same broadcast signal. The final formula $\phi_{18}$
 handles the ``compulsive'' nature of broadcast synchronization. When there
@@ -1650,7 +1653,7 @@ for all other TA in the network we require that if there exists a transition
   \item whose guards are all satisfied
 \end{itemize}
 then the TA is required to take (have active) a transition with the event
-$\alpha@$.
+$\alpha @$.
 
 %The other important distinction is that the broadcast send signal ``compels''
 %the other Timed Automata to respond with broadcast receive if they are able to.
@@ -2372,42 +2375,51 @@ that future additions will not be hampered by the ``low-level'' nature of our
 encoding.
 
 In addition to re-implementing the translation of timed automata networks, we
-have corrected several deficiencies in the original TACK implementation, and
-the tool now supports the full variable constraint and variable assignment
-grammars. In addition our implementation allows users to choose the desired
-liveness and edge semantics at run-time. Furthermore our encoding eliminates the
-unnecessary state BitVectors, creating a smaller search space for the SMT
-solver. We are proud to present the implementation of this algorithm, which is
-available for download at \url{https://github.com/fm-polimi/TACK} alongside the
-original TACK encoding, as free software.
+have corrected several deficiencies in the original TACK implementation, and the
+tool now supports the full variable constraint and variable assignment grammars.
+In addition our implementation allows users to choose the desired liveness and
+edge semantics at run-time, with a wider selection of values than the original
+\cltloc\ encoding. Furthermore our encoding eliminates the unnecessary state
+BitVectors, creating a smaller search space for the SMT solver. We are proud to
+present the implementation of this algorithm, which is available for download at
+\url{https://github.com/fm-polimi/TACK} alongside the original TACK encoding, as
+free software.
 
 Empirical testing has revealed that our approach exhibits significant speedups
 across several benchmarks when compared to the previous encoding. The results
 seem to indicate that our approach is better suited to exploring models with
-larger bounds, as the time necessary to solver larger and larger bounds grows
-more slowly when compared with the \cltloc\ encoding.
+larger bounds, as the time necessary to solve larger and larger bounds grows
+more slowly when compared with the \cltloc\ encoding. In addition, after
+discovering a flaw in the \cltloc\ encoding that rendered it unable to solve the
+CSMA/CD property, we took the opportunity to compare the performance of our
+encoding with Unrestricted Liveness and open edges against the same encoding but
+with Stong Transition Liveness and right-closed edges only. Our results showed
+that the latter encoding achieved significant speedups by reducing the search
+space, with the speedup increasing with the problem size.
 
 \section{Future Work}
 
-One potential future research direction is in similarly improving the encoding
-of the MITL property files into BitVector logic. As seen in the TACK results,
-the speedup achieved by our tool was weakest when the MITL property was the
-largest, namely during the tests of Fischer liveness property six. Another
-benefit to this re-implementation would be the potential inclusion of finite
-traces (albeit with restrictions on the properties supported). This can already
-be supported in the TA encoding by disabling the loop constraints, however
-restrictions to the MITL encoding would be necessary to make this extension useful.
+One potential future research direction is to similarly improve the encoding of
+the MITL property files into BitVector logic. As seen in the TACK results, the
+speedup achieved by our tool was weakest when the MITL property was the largest,
+namely during the tests of Fischer liveness property six. Another benefit to
+this re-implementation would be the potential inclusion of finite traces (albeit
+with restrictions on the properties supported). This can be supported in the TA
+encoding by disabling the loop constraints or making them conditional on a
+`loop-exists' variable, however modifications to the MITL encoding would be
+necessary to make this extension useful.
 
-Another potential feature that could be more easily added is support for
-automatically verifying that bounded integer variables are never assigned a
+In addition to future research, there are also opportunities to add additional
+ease-of-use features to TACK\@. One such feature that could be added is support
+for automatically verifying that bounded integer variables are never assigned a
 value outside of their bounds. Currently our BitVector implementation simply
 allows variables to overflow, considering the burden of verifying the bounds to
 fall on the user. However it would be relatively straightforward to increase the
-size of the variable BitVectors so that an illegal assignment would no longer
-overflow, and to then create a custom MITL property that asserts that the
-variable never leaves its given bounds. Users could then check to see if their
-bounds were in fact correct, and receive a trace showing the violation if one
-existed.
+size of the variable BitVectors so that all possible illegal assignments are
+guarenteed to not overflow, and to then create a custom MITL property that
+asserts that the variable never leaves its given bounds. Users could then check
+to see if their bounds were in fact correct, and receive a trace showing the
+violation if one existed.
 
 \newpage
 
