@@ -78,28 +78,29 @@ encoding, and correct deficiencies in the original encoding.
 \section*{Sommario}\label{sommario}
 \addcontentsline{toc}{section}{Sommario}
 
-Gli Automi temporizzati (TA) sono uno standard di modellazione de facto per
-sistemi con proprietà sensibili al tempo. Un' attività comune è quella di
-verificare se una data rete di TA soddisfare una data proprietà per ogni
-possibile esecuzione della rete. Le proprietà si prestano ad essere espresse in
-Logica temporale lineare (LTL), che permette di esprimere proposizioni atomiche
-definite nel tempo. Ci basiamo sul TA solver TACK, che supporta proprietà
-espresse nella ricca logica temporale Metric Interval Temporal Logic (MITL), e
-codifica sia la rete TA che la proprietà da verificare in una variante di LTL,
-Constraint LTL over clocks (CLTLoc). La CLTLoc risultante formula può quindi
-essere risolta con strumenti come Zot, che trasformano CLTLoc in SMT-LIB2, un
-linguaggio solutore SMT standardizzato con supporto per BitVector e logiche
-reali.
+Gli Automi temporizzati (TA) sono de facto lo standard di modellazione per
+sistemi con proprietà dipendenti dal tempo. Un'importante attivit\`{a} \`{e}
+quella di verificare se una data rete di TA soddisfa una data propriet\`{a}, per
+ogni possibile esecuzione della rete. Molte propriet\`{a} interassanti si
+possono esprimere in modo sintetico e efficace in Logica Temporale Lineare
+(LTL), che permette di predicare su proposizioni atomiche variabili nel tempo.
+In questa tesi ci basiamo sul TA solver TACK, che supporta propriet\`{a}
+espresse nella logica temporale Metric Interval Temporal Logic (MITL), pi\`{u}
+espressiva di LTL, e codifica sia la rete TA che la propriet\`{a} da verificare
+in una variante di LTL, Constraint LTL over clocks (CLTLoc). La formula CLTLoc
+risultante pu\`{o} quindi essere risolta con strumenti di verifica come Zot, che
+trasformano CLTLoc in SMT-LIB2, un linguaggio standardizzato per solutori SMT
+con supporto per BitVector e logiche reali.
 
-Vi presentiamo un nuovo metodo che conserva la codifica TACK delle proprietà
-MITL durante la codifica della rete di TA direttamente in SMT-LIB2, utilizzando
-sia la logica BitVector che la logica delle funzioni a valore reale. Il nostro
-principale risolutore SMT mirato è lo Z3 di Microsoft, che supporta molti
-formati standardizzati, compreso SMT-LIB2 e ha un forte supporto per diverse
-logiche SMT\@. Vi presentiamo diverse ottimizzazioni che ci permettono di
-migliorare in modo significativo la codifica CLTLoc, di correggere le
+In questa tesi presentiamo un nuovo metodo di verifica che conserva la codifica
+TACK delle propriet\`{a} MITL ma che codifica la rete di TA direttamente in
+SMT-LIB2, utilizzando sia la logica BitVector che la logica delle funzioni a
+valore reale. Il nostro principale risolutore SMT mirato \`{e} lo Z3 di
+Microsoft, che supporta molti formati standardizzati, compreso SMT-LIB2 e ha un
+forte supporto per diverse logiche SMT\@. Abbiamo introdotto varie
+ottimizzazioni che ci hanno permesso di migliorare in modo significativo le
+prestazioni di verifica rispetto alla codifica CLTLoc e di correggere alcune
 carenze nella codifica originale.
-
 \chapter{Introduction}\label{introduction}
 
 Timed Automata~\cite{alur94} (TA) are a popular tool for modeling time-sensitive
@@ -2082,22 +2083,46 @@ at the same time.
 \end{tabular}
 \end{table}
 
+\begin{figure}[h]
+  \centering
+  \caption{Average Speedup Achieved by Different Liveness Properties}
+  \label{fig:speedup}
+  \includegraphics[width=1.0\textwidth]{speedup}
+\end{figure}
+
 As we can see, the results printed in Tables~\ref{table:fischer-results-aez}
 and~\ref{table:fischer-results-ta2smt} show the difficulty curves for each
 problem, as both solvers take considerably more time to solve problems with
-larger bounds and with a larger number of TA in the network. However it is clear
-that across the first 5 properties, the ta2smt algorithm clearly scales better
-to handle both more agents and larger bounds. The most striking example is
-Live-two, where with a bound of 10, both algorithms' performances are roughly
-equivalent, whereas with a bound of 30 the ta2smt algorithm quickly becomes over
-an order of magnitude faster than the \aez\ encoding.
+larger bounds and with a larger number of TA in the network. To better visualize
+these results, we have condensed the tables above into Figure~\ref{fig:speedup},
+which computes the average speedup for a given property and bound. The speedup
+is defined as the time taken by \aez divided by the time taken by ta2smt. A
+speedup of 1 indicates that both times are equivalent, values larger than one
+(resp.\ less than one) represents a faster time by ta2smt (resp. \aez). The
+speedup can only be calculated when both algorithms terminate within the given
+time limit of two hours. When at least one algorithm does not terminate for a
+given number of TA, that run is excluded from the average. While this usually
+does not significantly impact the average, property live-two with bound 30, as
+well as live-six with bounds of 25 and 30 have three or more runs excluded from
+the average, and as a result the average may be significantly skewed. This is
+because there is a clear trend, at least across the first five properties, where
+the ta2smt algorithm clearly scales better to handle both more agents and larger
+bounds. This means that when multiple runs with large numbers of agents are
+excluded, as is the case in the three examples mentioned, the average is heavily
+weighted towards runs with fewer agents, favoring \aez. The most striking
+example of this trend is Live-two, where with a bound of 10, both algorithms'
+performances are roughly equivalent, whereas with a bound of 30 the ta2smt
+algorithm quickly becomes over an order of magnitude faster than the \aez\
+encoding.
 
 The one property that does not fit this trend is Live-six, where the ta2smt
 algorithm's performance ranges from equivalent to worse than the \aez\
 algorithm. This property is unique in that the MITL property to be verified
 grows in size with the number of TA in the network. It is possible that at
-larger sizes, the MITL encoding becomes a bottleneck, and the benefits of the
-ta2smt algorithm are overshadowed by this overhead.
+larger sizes, the MITL encoding becomes a bottleneck that limits the utility of
+further TA optimizations. It is also possibile that live-six is an extension of
+the varying results seen in the other tests. It is possibe that both ta2smt and
+\aez have problems where they excel.
 
 Another result that may seem unusual is the behavior seen in live-three and
 live-five with a bound of 10. Both algorithms are unable to find a
