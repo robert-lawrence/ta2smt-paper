@@ -2134,14 +2134,14 @@ order of magnitude faster than the \aez\ encoding.
 The averages shown above are an average of the performance over the nine model
 sizes, and we believe it is in fact a rather pessimistic assessment of the
 ta2smt algorithm. Because ta2smt exhibits superior scaling to larger models and
-bounds, if larger models and higher bounds were to be added to the results, we
-expect that the results would be even more favorable to ta2smt. An interesting
-exception to this trend seems to be the bound of thirty, where ta2smt exhibits a
-lower speedup than with a bound of twenty-five. After consulting the tables we
-highly suspect that this is due to a quirk of \aez, where the results with a
-bound of thirty are slightly better than with a bound of twenty-five for several
-problems. We are not sure as to the cause of this strange phenomenon, but we do
-not expect this to repeat at higher bounds.
+bounds, if even larger models and higher bounds were to be added to the results,
+we expect that the results would be even more favorable to ta2smt. An
+interesting exception to this trend seems to be the bound of thirty, where
+ta2smt exhibits a lower speedup than with a bound of twenty-five. After
+consulting the tables we highly suspect that this is due to a quirk of the \aez\
+encoding, where the results with a bound of thirty are slightly better than with
+a bound of twenty-five for several problems. We are not sure as to the cause of
+this strange phenomenon, but we do not expect this to repeat at higher bounds.
 
 The one property that does not fit the general trend is Live-six, where the
 ta2smt algorithm's performance ranges from equivalent to worse than the \aez\
