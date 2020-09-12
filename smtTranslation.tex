@@ -44,6 +44,20 @@
 \title{Improved Verification of Networks of Timed Automata}
   \input{./frontpage/frontpage.tex}
 
+\section*{Acknowledgements}
+\thispagestyle{empty}
+\vspace{1cm}
+\begin{center}
+  \mbox{\parbox{10cm}{\centering Many thanks to my supervisors for their
+      guidance and many insightful comments, and to my family for all of their
+      support. \vspace{1cm}
+
+      Special thanks to my friends for keeping me company during the long
+      quarantine from the other side of the Atlantic Ocean. }}
+\end{center}
+
+\clearpage
+
 \tableofcontents
 \listoffigures
 \newpage
@@ -64,14 +78,14 @@ properties expressed in the rich Metric Interval Temporal Logic (MITL), and
 encodes both the TA network and property to be verified into a variant of Linear
 Temporal Logic, Constraint LTL over clocks (\cltloc). The produced \cltloc\
 formula can then be solved by tools such as Zot, which transform \cltloc\
-properties into SMT-LIB2, a standardized SMT solver language with support for
+properties into SMT-LIB, a standardized SMT solver language with support for
 BitVector and real-valued logics.
 
 We present a novel method that preserves TACK's encoding of MITL properties
-while encoding the Timed Automata network directly into SMT-LIB2, making use of
+while encoding the Timed Automata network directly into SMT-LIB, making use of
 both the BitVector logic and the logic of real-valued functions. Our primary
 targeted SMT solver is Microsoft's Z3, which supports many standardized formats,
-including SMT-LIB2 and has strong support for several SMT logics. We introduce
+including SMT-LIB and has strong support for several SMT logics. We introduce
 several optimizations that allow us to significantly outperform the \cltloc\
 encoding, and correct deficiencies in the original encoding.
 
@@ -89,14 +103,14 @@ espresse nella logica temporale Metric Interval Temporal Logic (MITL), pi\`{u}
 espressiva di LTL, e codifica sia la rete TA che la propriet\`{a} da verificare
 in una variante di LTL, Constraint LTL over clocks (CLTLoc). La formula CLTLoc
 risultante pu\`{o} quindi essere risolta con strumenti di verifica come Zot, che
-trasformano CLTLoc in SMT-LIB2, un linguaggio standardizzato per solutori SMT
+trasformano CLTLoc in SMT-LIB, un linguaggio standardizzato per solutori SMT
 con supporto per BitVector e logiche reali.
 
 In questa tesi presentiamo un nuovo metodo di verifica che conserva la codifica
 TACK delle propriet\`{a} MITL ma che codifica la rete di TA direttamente in
-SMT-LIB2, utilizzando sia la logica BitVector che la logica delle funzioni a
+SMT-LIB, utilizzando sia la logica BitVector che la logica delle funzioni a
 valore reale. Il nostro principale risolutore SMT mirato \`{e} lo Z3 di
-Microsoft, che supporta molti formati standardizzati, compreso SMT-LIB2 e ha un
+Microsoft, che supporta molti formati standardizzati, compreso SMT-LIB e ha un
 forte supporto per diverse logiche SMT\@. Abbiamo introdotto varie
 ottimizzazioni che ci hanno permesso di migliorare in modo significativo le
 prestazioni di verifica rispetto alla codifica CLTLoc e di correggere alcune
@@ -110,7 +124,7 @@ representing time-bound processes and applications. They have found common use
 in the domain of model checking, where system representations are evaluated
 against a given property of interest. Various tools and encoding languages exist
 for a variety of applications and use cases. These include the current de facto
-standard Uppaal~\cite{larsen97}, as well as RED and
+standard Uppaal~\cite{larsen97}, as well as NuSMV~\cite{cimatti02} and
 $\text{MITL}_{0,\infty}$BMC~\cite{kindermann13}.
 
 Model Checking refers to a verification technique for solving properties of
@@ -176,7 +190,7 @@ For many years, model checking was performed using Binary Decision Diagrams
 (BDDs)~\cite{bryant86}, which offer many time- and space-complexity advantages
 over explicit state enumeration~\cite{burch92}. BDDs are symbolic
 representations of functions over boolean variables that exploit symmetries to
-avoid explicitly representing the entire state space directly. However to
+avoid explicitly representing the entire state space. However to
 efficiently handle larger state spaces, BDDs have been largely abandoned in
 favor of bounded model checking techniques. A representative example is
 NuSMV~\cite{cimatti02}, which was originally designed to use BDDs but has since
@@ -224,7 +238,7 @@ powerful, standard MTL properties are undecidable in general for infinite
 traces~\cite{bouyer09}. To make MTL tractable, the subset MITL was proposed in
 1991~\cite{Alur91thebenefits}, which offers decidable continuous semantics for
 TAs. MITL is valuable both for its \emph{continuous} time semantics, where the
-value of a property can be known at every position $r \in \mathcal{R^{+}}$, and
+value of a property can be known at every position $p \in \mathbb{R^{+}}$, and
 for its ability to capture expressive and complex properties. Examples of MITL
 solvers include a tool developed by Kindermann et al.~\cite{kindermann13}, which
 relies on a further subset $\text{MITL}_{0,\infty}$ for property validation, and
@@ -232,14 +246,14 @@ currently supports both finite and lasso-shaped bounded traces. Another is TACK,
 which was developed by Menghi et al.~\cite{tack20} and has implemented a bounded
 model checker for lasso-shaped infinite traces over the full MITL logic. To
 improve the speed of the verification process, TACK encodes the TA and property
-to be verified into BitVector logic, which is supported by the standardized
-SMT-LIB2 language.~\cite{baresi15,baresi16} To avoid the incompleteness of the
-naive lasso encoding shown by Kindermann~\cite{kindermann12}, both tools use a
-region-based encoding of the clock values. This is paired with a ``non-Zeno''
-requirement, so that the infinite traces span an infinite amount of time. In the
-following chapter we will summarize the background and work accomplished in the
-TACK solver, before then presenting our contribution to the TACK verification
-tool.
+to be verified into BitVector logic~\cite{baresi15,baresi16}, which is supported
+by the standardized SMT-LIB language~\cite{BarFT-SMTLIB}. To avoid the
+incompleteness of the naive lasso encoding shown by
+Kindermann~\cite{kindermann12}, both tools use a region-based encoding of the
+clock values. This is paired with a ``non-Zeno'' requirement, so that the
+infinite traces span an infinite amount of time. In the following chapter we
+will summarize the background and work accomplished in the TACK solver, before
+then presenting our contribution to the TACK verification tool.
 
 \section{Timed Automata}\label{timed-automata}
 
@@ -276,25 +290,25 @@ help visualize important concepts.
 \end{figure}
 
 As we can see in Figure~\ref{fig:example-blank}, Timed Automata have many
-similarities with Finite State Machines and other automata. For a given
-automaton $\mathcal{A}_{i}$, the example TA consists of a finite set of states
-$Q_{i} = \{q_{1},q_{2},q_{3}\}$, and a finite set of transitions
-$T_{i} = \{t_{1},t_{2},t_{3},t_{4}\}$. Like a finite state machine, at a given
-moment in time there is one state that is ``active''. The TA can take
-transitions that may change its state, with the condition that the source of the
-transition must be the currently active state. We denote the source state of a
-transition $t$ as $t_{-}$, and the destination state as $t_{+}$. As an example,
-if the current active state is $q_{1}$, then either $t_{1}$ or $t_{2}$ can be
-taken. Although not shown in this example, the source and destination state of a
-transition may be the same state, and there may be multiple transitions with
-identical source states and identical destination states.
+similarities with Finite State Machines and other automata. This example timed
+automaton consists of a finite set of states $Q_{i} = \{q_{1},q_{2},q_{3}\}$,
+and a finite set of transitions $T_{i} = \{t_{1},t_{2},t_{3},t_{4}\}$. Like a
+finite state machine, at a given moment in time there is one state that is
+``active''. The TA can take transitions that may change its state, with the
+condition that the source of the transition must be the currently active state.
+We denote the source state of a transition $t$ as $t_{-}$, and the destination
+state as $t_{+}$. As an example, if the current active state is $q_{1}$, then
+either $t_{1}$ or $t_{2}$ can be taken. Although not shown in this example, the
+source and destination state of a transition may be the same state, and there
+may be multiple transitions with identical source states and identical
+destination states.
 
 In addition to states and transitions, TA are enriched with clocks and bounded
-integer variables. Clocks are variables over $\mathbb{R}_{\geq 0}$ that increment with the
-passage of time. Their ability to continuously change value is fundamental to
-the ability of timed automata to model time-sensitive and real-time systems.
-Meanwhile the bounded integer variables do not change value on their own, and
-have to be explicitly modified by the TA.
+integer variables. Clocks are variables over $\mathbb{R}_{\geq 0}$ that
+increment with the passage of time. Their ability to continuously change value
+is fundamental to the ability of timed automata to model time-sensitive and
+real-time systems. Meanwhile the bounded integer variables do not change value
+on their own, and have to be explicitly modified by the TA.
 
 \begin{figure}[h]
   \centering
@@ -313,12 +327,17 @@ $5$. Assignments on the other hand modify the value of a clock or variable
 \emph{after} the transition has been taken. For example, it is perfectly valid
 for transition $t_{2}$ to be taken when $x=6$, even though the assignment $x=0$
 resets the value of $x$ to $0$, which is smaller than the value accepted by the
-transition guard $x>5$. Variables can be assigned to any value, while clocks can
-only be reset to $0$. The third feature to mention are the state invariants. In
-our example there is only one, $x<2$ which is associated with state $q_{2}$.
-When a state is active, its invariant (if any) is required to be true. The
-invariant attached to $q_{2}$ requires the TA to depart state $q_{2}$ before
-clock $x$ reaches a value of $2$.
+transition guard $x>5$. To be clear, the value is updated in the same instant as
+the transition, however the guards only consider the pre-transition value of the
+clock when determining if the transition is valid. Variables can be assigned to
+any value, while clocks can only be reset to $0$. The third feature to mention
+are the state invariants. In our example there is only one, $x<2$ which is
+associated with state $q_{2}$. When a state is active, its invariant (if any) is
+required to be true. The invariant attached to $q_{2}$ requires the TA to depart
+state $q_{2}$ before clock $x$ reaches a value of $2$. In this example the only
+transition that leads to state $q_{2}$ resets the value of clock $x$, but in
+general it is illegal to transition into a state if the invariant would be
+violated upon entry.
 
 
 In addition to clocks and variables, TA also offer a powerful synchronization
@@ -357,7 +376,7 @@ the actions to describe the type of synchronization desired.
 
 As shown in Table~\ref{table:sync-def}, two types of synchronization are
 defined. The first type is one-to-one synchronization, which has two associated
-operators, one signifying one-to-one `send' (${!}$), and the second for
+operators, one signifying one-to-one sending (${!}$), and the second for
 one-to-one receiving (${?}$). A transition labeled with $\alpha{!}$, for some
 channel $\alpha$, can only be fired if at the same moment in time, another TA
 takes a transition labeled with the $\alpha{?}$ event. The second type of
@@ -365,7 +384,7 @@ synchronization available is termed `broadcast' synchronization, and again we
 have two operators, broadcast-send ($\#$) and broadcast-receive (${@}$). Like
 one-to-one synchronization, for a given channel $\alpha$ there can only be one
 active transition with the event $\alpha\#$, however the difference is that
-there can be 0,1, or multiple automata that sync using broadcast-receive at
+there can be 0, 1, or multiple automata that sync using broadcast-receive at
 once. In addition, each automaton is \emph{required} to perform a broadcast-sync
 if it is able to, meaning that there exists a transition $t$ such that $t_{-}$
 is the currently active state, and all guards of the transition are satisfied.
@@ -381,7 +400,7 @@ variables. \(\Gamma(X)\) is the set of clock constraints, where a clock
 constraint \(\gamma\) is a relation
 \(x \sim c \BitOr \gamma \land \gamma\), where \(x \in X\),
 \(\sim \in \{<,>,\leq,\geq\}\), and \(c \in \mathbb{N}\). \(Assign(X)\) is the set of
-clock assignments, where each assignment has the form \(x {=} 0\), where
+clock assignments, where each assignment has the form \(x := 0\), where
 \(x \in X\iffalse{,\ c {\in} \mathbb{Z}^+}\fi\). \(Assign(Int)\) is a set of
 variable assignments of the form \(y := exp\), where
 \(exp := exp + exp\BitOr exp - exp\BitOr n\BitOr c\),
@@ -461,8 +480,8 @@ all transitions follow this pattern because two consecutive temporal transitions
 $\delta$ can simply be combined into one whose length is the sum of the two
 original transitions, and two consecutive discrete transitions can be combined
 \textbf{iff} no TA in the network performs a non-null transition in both
-transitions, in which case the trace would be illegal, for the TA would be in
-multiple states in the same time position.
+positions, in which case the trace would be illegal, as TA cannot perform
+multiple simultaneous transitions in our model.
 
 \begin{figure}[h]
   \centering
@@ -479,8 +498,9 @@ clarity in the traces shown here, the values of $t[1]$ and $\delta$ have been
 shifted to the right by half of one position, so that the active transition is
 placed in between its source and destination states. At the top of the trace
 $l[1]$ tracks the currently active state of the timed automaton. In this simple
-trace the automaton begins in state $q_{1}$, transitions to $q_{2}$, remains in
-$q_{2}$ for another position, and then transitions to $q_{3}$. Below the active
+trace the automaton begins in state $q_{1}$, then after $6$ time units in
+$q_{1}$ the TA transitions to $q_{2}$, remains in
+$q_{2}$ using a null transition, and then transitions to $q_{3}$. Below the active
 state we show the active values of both the variable $n$ and the clock $x$ at
 the given positions. The value $\delta$ shows the amount of time that passes
 between the current state, and the immediately following state.
@@ -488,7 +508,7 @@ between the current state, and the immediately following state.
 One surprising observation is that the value of the clock $x$ does not seem to
 change between positions $0$ and $1$, despite $\delta$ indicating that $6$ units
 of time has passed. Recall that transition $t_{2}$ resets the value of the clock
-$x$ to zero, and that the trace capture the values of clocks and variables
+$x$ to zero, and that the trace captures the values of clocks and variables
 \emph{after} any assignments have been applied.
 
 \begin{figure}[h]
@@ -512,20 +532,20 @@ an interesting question: at the moment of transition, what is the active state?
 Possible answers could include the source state, the destination, both, or
 neither. Different models of Timed Automata implement this differently. Some,
 like Uppaal~\cite{larsen97} implement so called ``super-dense'' time semantics,
-in which the TA may be in multiple states in the same time instance. In our
-model, the TA is always in exactly one state at every instant in time. If at the
-moment of transition the TA remains in the source state, the transition is said
-to be ``right-closed'' or equivalently ``left-open'', because the interval of
-time that the TA spends in \(t_{-}\) ends in a closed interval, while the
-interval of time that the TA spends in \(t_{+}\) begins in an open interval.
-Conversely if the TA is located in the destination state at the moment of
-transition, we say that it is ``left-closed'', which also implies that it is
-right-open. Returning to our example trace, if the timed automaton is not in
-state $q_{2}$ in the instance of transition, then the strict inequality in the
-state invariant can be satisfied with equality at the instance of transition,
-since the automaton is not actually in that state at that final moment. To
-formalize this notion we introduce the weak clock relation $\sim_{w}$, which is
-defined as follows:
+in which the TA may be in multiple states and perform multiple transitions in
+the same instant of time. In our model, the TA is always in exactly one state at
+every instant in time. If at the moment of transition the TA remains in the
+source state, the transition is said to be ``right-closed'' or equivalently
+``left-open'', because the interval of time that the TA spends in \(t_{-}\) ends
+in a closed interval, while the interval of time that the TA spends in \(t_{+}\)
+begins in an open interval. Conversely if the TA is located in the destination
+state at the moment of transition, we say that it is ``left-closed'', which also
+implies that it is right-open. Returning to our example trace, if the timed
+automaton is not in state $q_{2}$ in the instance of transition, then the strict
+inequality in the state invariant can be satisfied with equality at the instance
+of transition, since the automaton is not actually in that state at that final
+moment. To formalize this notion we introduce the weak clock relation
+$\sim_{w}$, which is defined as follows:
 \begin{align*}
   x \sim_{w} c  \iff & (x \sim c\ \lor\ x = c) \ \ \sim \in \{<,>,\leq,\geq\} \\
   x =_{w} c  \iff & false
@@ -549,7 +569,7 @@ the edge variable is not shown during the null transition, however during a null
 transition either value is equivalent. We now revise the notion of a trace to
 include this term.
 \begin{defn} A trace $\eta$ is an infinite sequence
-  \[\eta = (l_{0},v_{0},v_{var,0}),\delta_{0},t_{0},edge_{0}(l_{1},v_{1},v_{var,1}),\delta_{1},t_{1},edge_{1} \ldots\]
+  \[\eta = (l_{0},v_{0},v_{var,0}),\delta_{0},t_{0},edge_{0},(l_{1},v_{1},v_{var,1}),\delta_{1},t_{1},edge_{1}, \ldots\]
 \end{defn}
 
 When using Timed Automata to model real-time systems, a common desire is to
@@ -575,8 +595,8 @@ the bound \(k\), as the solver has shown that no lasso-shaped traces of length
 \(k\) exist that contradict the property. Although restricting ourselves to only
 lasso-shaped traces may seem to be a severe limitation, it has been shown that
 for a given TA network $\mathcal{A}$, there exists a limit $K$ such that if a
-counterexample for a given property exists, there exists a lasso-shaped
-counterexample of length no more than $K$~\cite{biere99}.
+counterexample for a given property exists, there exists a counterexample of
+length no more than $K$~\cite{biere99}.
 
 \section{Constraint LTL Over Clocks}\label{cltloc}
 
@@ -601,7 +621,7 @@ of variables. An example would be the expression \(b + c = 7\); \(b,c \in Int\).
 Let \(X\) be a finite set of clocks and \(Int\) be a finite set of integer
 variables. \cltloc\ formulas are defined as follows:
 \[\phi := p \BitOr x \sim c \BitOr \exp_{1} \sim \exp_{2} \BitOr \mathcal{X}(n) \sim \exp \BitOr \phi \land \phi \BitOr \neg \phi \BitOr \mathcal{X}\phi \BitOr \phi \mathcal{U} \phi \]
-Where \(a \in AP\), \(x \in X\), \(c \in \mathbb{N}\), \(n \in Int\),
+Where \(p \in AP\), \(x \in X\), \(c \in \mathbb{N}\), \(n \in Int\),
 $\sim \in \{<,=\} $ and \(exp\) are arithmetic formulas over integer variables
 and integers (defined in Section~\ref{timed-automata}).
 
@@ -611,9 +631,8 @@ more specific, each clock must either increment between two adjacent time
 positions, or it must be reset. To maintain a consistent view of time, we
 introduce \(\delta: \mathbb{N} \rightarrow \mathbb{R}_{>0}\), which measures the
 amount of time that elapses between two adjacent time positions. For a given
-clock `valuation'
-\(\sigma: \mathbb{N} \times X \rightarrow \mathbb{R}_{\geq 0}\), each clock
-\(x \in X\) must either obey the equivalence
+clock valuation \(\sigma: \mathbb{N} \times X \rightarrow \mathbb{R}_{\geq 0}\),
+each clock \(x \in X\) must either obey the equivalence
 \(\sigma(l,x) + \delta(l) = \sigma(l+1,x)\), or is reset, i.e.\
 \(\sigma(l+1,x) = 0\). This ensures that all clocks progress at the same rate,
 and we can use \(\delta(t)\) to calculate the amount of time elapsed between any
@@ -626,7 +645,7 @@ arithmetical expressions $\exp$ can now be evaluated at a time position $l$ by
 replacing every occurrence of an integer variable $n$ with $\iota(l,n)$.
 
 A \cltloc\ interpretation is the triple $(\pi, \sigma, \iota)$, where
-$\phi: \mathbb{N} \rightarrow \wp(AP)$ maps time positions to the set of atomic
+$\pi: \mathbb{N} \rightarrow \wp(AP)$ maps time positions to the set of atomic
 propositions that evaluate to true, and $\sigma$ and $\iota$ are the clock and
 variable valuations. A \cltloc\ formula $\phi$ evaluated at time position $l$ is
 defined as follows:
@@ -649,11 +668,11 @@ is often shortened to simply $(\pi,\sigma,\iota) \vDash \phi$.
 \section{MITL}\label{mitl}
 
 Metric Interval Temporal Logic is a restriction of Metric Temporal Logic (MTL)
-such that subscripts must be intervals~\cite{bouyer09}. An interval $I$ is a
-convex region of $\mathbb{R}_{\geq 0}$. The bounds of this region must be in the
-set $\{\mathbb{N} \cup \infty\}$. We will represent an interval as
-$\langle a,b \rangle$ or $\langle a,\infty )$, where $a,b \in \mathbb{N}$,
-$\langle\ \in \{\ (,[\ \}$ and $\rangle \in \{\ ),]\ \}$.
+such that subscripts must be intervals~\cite{Alur91thebenefits} of non-zero
+length. An interval $I$ is a convex region of $\mathbb{R}_{\geq 0}$. The bounds
+of this region must be in the set $\{\mathbb{N} \cup \infty\}$. We will
+represent an interval as $\langle a,b \rangle$ or $\langle a,\infty )$, where
+$a,b \in \mathbb{N}$, $\langle\ \in \{\ (,[\ \}$ and $\rangle \in \{\ ),]\ \}$.
 
 The following grammar describes the set of MITL formulas:
 \[\phi := \alpha\ |\ \phi \lor \phi\ |\ \neg \phi\ |\ \phi\ \mathcal{U}_{I} \phi\]
@@ -687,7 +706,7 @@ Interval Temporal Logic to specify the property to be checked for satisfiability
 which allows for more compact and powerful specifications of the desired
 properties to be checked. Once the Timed Automata network and the MITL property
 have been converted into CLTLoc, TACK then uses the tool Zot to convert this
-intermediate representation of the problem into the SMT-LIB2 language, which is
+intermediate representation of the problem into the SMT-LIB language, which is
 supported by many modern SMT solvers. Zot was designed with a modular
 architecture to allow for several different strategies and algorithms that can
 be used to convert its input. Currently the most successful Zot plugin for
@@ -997,7 +1016,7 @@ the infinite sequence of positions \([232323\ldots]\).
     \(\mathcal{X} \varphi\)        & \(\overleftarrow{(\mathcal{X}\varphi)}^{[k:0]} = \overleftarrow{(\varphi)}^{[k{+}1:1]} \) \\
     \(\varphi_{1} \mathcal{U} \varphi_{2}\) & \(\overleftarrow{(\varphi_{1} \mathcal{U} \varphi_{2})}^{[k:0]} = \overleftarrow{(\varphi_{2})}^{[k:0]} \BitOr \bigl( \overleftarrow{(\varphi_{1})}^{[k:0]} \BitAnd \overleftarrow{(\varphi_{1} \mathcal{U} \varphi_{2})}^{[k{+}1:1]} \bigr) \) \\
              & \(\land \biggl( \Bigl( \big( \overleftarrow{(\varphi_{1})}^{[k{+}1]} \BitOr \overleftarrow{(\varphi_{2})}^{[k{+}1]} \BitOr \BitNeg\overleftarrow{(\varphi_{1} \mathcal{U} \varphi_{2})}^{[k{+}1]} \big) \BitAnd\) \\
-             & \( \big( !\overleftarrow{(\varphi_{2})}^{[k{+}1]} \BitOr \overleftarrow{(\varphi_{1} \mathcal{U} \varphi_{2})}^{[k{+}1]}\big) \Bigr) = 1 \biggr) \land \) \\
+             & \( \big(!\overleftarrow{(\varphi_{2})}^{[k{+}1]} \BitOr \overleftarrow{(\varphi_{1} \mathcal{U} \varphi_{2})}^{[k{+}1]}\big) \Bigr) = 1 \biggr) \land \) \\
     & \( \big( \overleftarrow{(\varphi_{1} \mathcal{U} \varphi_{2})}^{[k{+}1]} \Rightarrow \Uparrow \bigl( \overleftarrow{(\varphi_{2})} \BitAnd \overleftarrow{(inloop)} \bigr) = 1 \big) \)
 
   \end{tabular}
@@ -1013,17 +1032,9 @@ component sub-formulas based on the rules in Table~\ref{table:zot-constraints}.
 The first three formulas show the encoding of logical operators \(\neg, \land\),
 and \(\lor\). The rest of the table shows the encoding of the temporal
 operators. Extra care is taken in the definition of \(\mathcal{U}\) to ensure
-that the properties of the lasso are taken into account.
-
-%\begin{table}
-%  \centering
-%  \begin{tabular}{c}
-%    $ \underset{t \in T}{\land} \overleftarrow{t}_{[k{+}2]}^{[loop]} = \overleftarrow{t}_{[k{+}2]}^{k{+}1}$
-%    \\
-%    $\underset{q \in Q}{\land} \overleftarrow{q}$
-%  \end{tabular}
-%\end{table}
-
+that the properties of the lasso are taken into account. Note the use of the
+\emph{reduction or} operator $\Uparrow$, which has a value of $0$ if the
+BitVector argument is exactly zero, $1$ otherwise.
 
 Atomic propositions (including the active states, transitions, edges and
 variable valuation) are encoded as BitVectors, and form the basic atoms from
@@ -1072,7 +1083,7 @@ assigned a combination of the corresponding BitVectors in this fashion.
 
 
 Clocks, being real-valued functions, cannot be easily represented in BitVector
-logic. Instead \aez\ takes advantage of SMT-LIB2's support for multiple logics,
+logic. Instead \aez\ takes advantage of SMT-LIB's support for multiple logics,
 and encodes clocks directly as functions that accept an integer argument,
 representing the time position, and return a real number. For a given clock
 guard a BitVector is constructed to represent the truth value of the clock
@@ -1133,7 +1144,9 @@ the first, we describe the various terms that make up our TA network, and
 discuss how they are encoded into BitVector logic. In the second, we present the
 constraints, defined over the terms from the first section, that capture the TA
 semantics. In the final section we argue for the correctness of our model, and
-highlight improvements made over \aez.
+highlight improvements made over the original encoding. For ease of reading we
+will refer to the old encoding as \aez\ when contrasting it with ta2smt, even
+though \aez\ is only one part of the \cltloc-based encoding of the network.
 
 \section{BitVectors}
 
@@ -1171,7 +1184,7 @@ Before describing the BitVector terms for the transitions, we must make one key
 change to our set of transitions. For reasons to be discussed we wish to
 represent the \emph{null transition} (when a TA does not transition between time
 positions) not as the separate entity \(\sharp\), but rather as a set of
-$Q_{i}$ transitions, one for each state $q \in Q_{i}$. We define these null
+$|Q_{i}|$ transitions, one for each state $q \in Q_{i}$. We define these null
 transitions as follows:
 \[\underset{i \in [1,N]}{\forall}\ \underset{q \in Q_{i}}{\forall}\ t_{null_q} := {<}q, q, \tau, \varnothing, \varnothing, \varnothing, \varnothing {>}\]
 These null transitions have the same source and destination state, and no
@@ -1293,6 +1306,8 @@ time.
 
 \begin{table}[h]
   \centering
+  \caption{Terms and Aliases used in BV encoding of TA}
+  \label{table:terms}
   \begin{tabular}{l c l}
     \toprule
     \multicolumn{3}{c}{Terms} \\
@@ -1329,9 +1344,8 @@ time.
     inloop & \(\underset{l \in [0,k{+}1]}{\forall}\) &
                \(\Big(\overleftarrow{inloop}_{[k{+}2]}^{[l]} = \overleftarrow{1}_{[1]} \Big) \leftrightarrow (\overleftarrow{loop} \leq \overleftarrow{l}) \) \\
     \bottomrule
-  \end{tabular}
-  \caption{Terms and Aliases used in BV encoding of TA}
-  \label{table:terms}
+  \end{tabular} \\
+  Note: the operator $\backslash$ is used to represent integer division.
 \end{table}
 
 Now that each piece of the timed automaton has been discussed, we can present
@@ -1371,7 +1385,7 @@ BitVector terms that make up our encoding. Also included are constraints on how
 these three groups of values (transitions, variables, and clocks) evolve
 throughout the trace.
 
-\begin{table}
+\begin{table}[h]
 \centering
 \begin{tabular}{c  c  c}
   \multicolumn{3}{c}{Initialization and Progression Constraints} \\
@@ -1719,7 +1733,7 @@ positions are in fact equivalent.
 
 \emph{Propositions $\phi_{19}-\phi_{20}$} For transitions, edges and variables
 this is very straightforward. We simply require that in the $loop$ and $k{+}1$
-positions that the active transitions, edge type, and variables have identical
+positions the active transitions, edge types, and variables have identical
 values.
 
 \emph{Propositions $\phi_{21}-\phi_{23}$} It is tempting to encode the clock
@@ -1746,7 +1760,7 @@ the relationship between values of different clocks, asserting that the
 relationship between two clock values \(\{<,>,=\}\) is preserved.
 
 \emph{Property $\phi_{24}$} As mentioned in Section~\ref{zot-encoding}, we must
-exclude the ``Zeno traces'' from consideration, because while they are infinite
+exclude the ``Zeno traces'' from consideration because while they are infinite
 traces, they execute in a finite amount of time. We encode the same constraint
 used in \aez. It is sufficient to require that every clock is either reset
 within the loop, or has a value greater than \(max(x)\) at position \(k\), which
@@ -1802,7 +1816,7 @@ In addition, our encoding contains improvements over the original TACK+\aez\
 encoding. As mentioned previously, \aez\ contains a limitation regarding integer
 variables - because they are represented as elements of a set, \aez\ can only
 test for equality. This means that constraints of the form $n \sim c$ or
-$n \sim n'$, where $\sim \neq =$ are not supported. Our encoding correctly
+$n \sim n'$, where $\sim \not\in \{=\}$ are not supported. Our encoding correctly
 represents the values of the integer variables using a twos-complement encoding,
 and therefore can support the full grammar of variable guards and assignments.
 Another deficiency in the original TACK implementation was a previously unknown
@@ -1851,19 +1865,19 @@ implementation modifies this plan slightly as follows:
 \begin{enumerate}
   \item The TA Network file and MITL property file are read from the input
     files and parsed.
-  \item The TA Network is converted into SMT-LIB2.
+  \item The TA Network is converted into SMT-LIB.
   \item The MITL property is converted into \cltloc.
   \item The \cltloc\ formula representing the MITL property is written to disk,
-    and \aez\ is invoked to convert the formula into SMT-LIB2 (without invoking
+    and \aez\ is invoked to convert the formula into SMT-LIB (without invoking
     Z3).
-  \item The two SMT-LIB2 files are combined, and Z3 is invoked to check for
+  \item The two SMT-LIB files are combined, and Z3 is invoked to check for
     satisfiabiltiy.
 \end{enumerate}
 We have therefore modified TACK to first determine which solution method is
 desired, and to then execute one of the two possible `solution plans' outlined
 above. Although currently ta2smt is the only algorithm available to execute step
 2 in the new plan, we have continued in the spirit of the original TACK design
-to make it simple for this algorithm to be modified and replaced, so that future
+to make it simple for this algorithm to be modified or replaced, so that future
 improvements are encouraged.
 
 In this chapter we present the results of several experimental evaluations of
@@ -1962,55 +1976,55 @@ at the same time.
   indicates the property is satisfied, a \xmark\ indicates that a counterexample
   was found. Blank entries indicate no result after two hours.}
 \label{table:fischer-results-aez}
-\begin{tabular}{c|c|r r r r r r r r r}
+\begin{tabular}{c c r r r r r r r r r}
 \toprule
 \multicolumn{11}{c}{TACK ae2sbvzot} \\
 \midrule
 \multicolumn{11}{c}{\(n\)} \\
 \midrule
-& k & 2 & 3 & 4 & 5 & 6 & 7 & 8 & 9 & 10 \\
+& k & \multicolumn{1}{c}{\textbf{2}} & \multicolumn{1}{c}{\textbf{3}} & \multicolumn{1}{c}{\textbf{4}} & \multicolumn{1}{c}{\textbf{5}} & \multicolumn{1}{c}{\textbf{6}} & \multicolumn{1}{c}{\textbf{7}} & \multicolumn{1}{c}{\textbf{8}} & \multicolumn{1}{c}{\textbf{9}} & \multicolumn{1}{c}{\textbf{10}} \\
 \midrule
-\multirow{5}{1em}{\rotatebox{90}{\textbf{live-one}}}
-& 10 & 0.9\cmark & 0.9\cmark & 1.0\cmark & 1.0\cmark & 1.2\cmark & 1.2\cmark & 1.5\cmark & 6.0\cmark & 1.7\cmark \\
-& 15 & 0.9\cmark & 0.9\cmark & 1.1\cmark & 1.4\cmark & 1.6\cmark & 1.7\cmark & 1.5\cmark & 14.2\cmark & 2.1\cmark \\
-& 20 & 1.0\cmark & 1.1\cmark & 1.3\cmark & 2.2\cmark & 1.9\cmark & 2.6\cmark & 2.4\cmark & 3.6\cmark & 3.9\cmark \\
-& 25 & 1.1\cmark & 1.6\cmark & 1.5\cmark & 2.1\cmark & 189.8\cmark & 3.4\cmark & 4.9\cmark & 4.5\cmark & 4.6\cmark \\
-& 30 & 1.1\cmark & 1.5\cmark & 2.0\cmark & 3.1\cmark & 6.4\cmark & 4.5\cmark & 4.9\cmark & 4.7\cmark & 4.8\cmark \\
+\multirow{5}{1em}{\rotatebox{90}{\textbf{live-one\ }}}
+& \textbf{10} & 0.9\cmark & 0.9\cmark & 1.0\cmark & 1.0\cmark & 1.2\cmark & 1.2\cmark & 1.5\cmark & 6.0\cmark & 1.7\cmark \\
+& \textbf{15} & 0.9\cmark & 0.9\cmark & 1.1\cmark & 1.4\cmark & 1.6\cmark & 1.7\cmark & 1.5\cmark & 14.2\cmark & 2.1\cmark \\
+& \textbf{20} & 1.0\cmark & 1.1\cmark & 1.3\cmark & 2.2\cmark & 1.9\cmark & 2.6\cmark & 2.4\cmark & 3.6\cmark & 3.9\cmark \\
+& \textbf{25} & 1.1\cmark & 1.6\cmark & 1.5\cmark & 2.1\cmark & 189.8\cmark & 3.4\cmark & 4.9\cmark & 4.5\cmark & 4.6\cmark \\
+& \textbf{30} & 1.1\cmark & 1.5\cmark & 2.0\cmark & 3.1\cmark & 6.4\cmark & 4.5\cmark & 4.9\cmark & 4.7\cmark & 4.8\cmark \\
 \midrule
-\multirow{5}{1em}{\rotatebox{90}{\textbf{live-two}}}
-& 10 & 1.4\cmark & 1.6\cmark & 1.7\cmark & 2.0\cmark & 2.0\cmark & 2.4\cmark & 2.5\cmark & 2.7\cmark & 3.1\cmark \\
-& 15 & 4.5\cmark & 6.3\cmark & 6.0\cmark & 9.7\cmark & 15.0\cmark & 27.0\cmark & 48.4\cmark & 67.4\cmark & 146.5\cmark \\
-& 20 & 10.8\cmark & 13.0\cmark & 37.5\cmark & 22.1\cmark & 56.6\cmark & 36.8\cmark & 56.8\cmark & 567.9\cmark & 1589.1\cmark \\
-& 25 & 32.6\cmark & 39.3\cmark & 57.3\cmark & 131.8\cmark & 102.4\cmark & 2369.2\cmark & 1614.3\cmark & 1197.9\cmark & 6311.7\cmark \\
-& 30 & 42.4\cmark & 80.7\cmark & 127.7\cmark & 63.8\cmark & 1149.1\cmark & 125.9\cmark & $-$ & $-$ & $-$ \\
+\multirow{5}{1em}{\rotatebox{90}{\textbf{live-two\ }}}
+& \textbf{10} & 1.4\cmark & 1.6\cmark & 1.7\cmark & 2.0\cmark & 2.0\cmark & 2.4\cmark & 2.5\cmark & 2.7\cmark & 3.1\cmark \\
+& \textbf{15} & 4.5\cmark & 6.3\cmark & 6.0\cmark & 9.7\cmark & 15.0\cmark & 27.0\cmark & 48.4\cmark & 67.4\cmark & 146.5\cmark \\
+& \textbf{20} & 10.8\cmark & 13.0\cmark & 37.5\cmark & 22.1\cmark & 56.6\cmark & 36.8\cmark & 56.8\cmark & 567.9\cmark & 1589.1\cmark \\
+& \textbf{25} & 32.6\cmark & 39.3\cmark & 57.3\cmark & 131.8\cmark & 102.4\cmark & 2369.2\cmark & 1614.3\cmark & 1197.9\cmark & 6311.7\cmark \\
+& \textbf{30} & 42.4\cmark & 80.7\cmark & 127.7\cmark & 63.8\cmark & 1149.1\cmark & 125.9\cmark & $-$ & $-$ & $-$ \\
 \midrule
 \multirow{5}{1em}{\rotatebox{90}{\textbf{live-three}}}
-& 10 & 1.0\xmark & 1.1\xmark & 1.6\xmark & 3.6\xmark & 8.0\xmark & 13.2\cmark & 19.5\cmark & 17.6\cmark & 26.7\cmark \\
-& 15 & 1.2\xmark & 1.3\xmark & 2.5\xmark & 2.0\xmark & 18.5\xmark & 27.6\xmark & 30.6\xmark & 59.4\xmark & 41.2\xmark \\
-& 20 & 1.2\xmark & 1.8\xmark & 2.1\xmark & 4.2\xmark & 8.0\xmark & 10.4\xmark & 23.9\xmark & 33.1\xmark & 64.7\xmark \\
-& 25 & 2.0\xmark & 2.3\xmark & 3.7\xmark & 5.9\xmark & 9.5\xmark & 24.1\xmark & 681.5\xmark & 753.3\xmark & 826.9\xmark \\
-& 30 & 1.5\xmark & 4.6\xmark & 4.6\xmark & 8.8\xmark & 32.7\xmark & 24.4\xmark & 30.7\xmark & 102.8\xmark & 150.1\xmark \\
+& \textbf{10} & 1.0\xmark & 1.1\xmark & 1.6\xmark & 3.6\xmark & 8.0\xmark & 13.2\cmark & 19.5\cmark & 17.6\cmark & 26.7\cmark \\
+& \textbf{15} & 1.2\xmark & 1.3\xmark & 2.5\xmark & 2.0\xmark & 18.5\xmark & 27.6\xmark & 30.6\xmark & 59.4\xmark & 41.2\xmark \\
+& \textbf{20} & 1.2\xmark & 1.8\xmark & 2.1\xmark & 4.2\xmark & 8.0\xmark & 10.4\xmark & 23.9\xmark & 33.1\xmark & 64.7\xmark \\
+& \textbf{25} & 2.0\xmark & 2.3\xmark & 3.7\xmark & 5.9\xmark & 9.5\xmark & 24.1\xmark & 681.5\xmark & 753.3\xmark & 826.9\xmark \\
+& \textbf{30} & 1.5\xmark & 4.6\xmark & 4.6\xmark & 8.8\xmark & 32.7\xmark & 24.4\xmark & 30.7\xmark & 102.8\xmark & 150.1\xmark \\
 \midrule
-\multirow{5}{1em}{\rotatebox{90}{\textbf{live-four}}}
-& 10 & 1.2\cmark & 1.3\cmark & 1.5\cmark & 1.7\cmark & 1.9\cmark & 2.1\cmark & 2.1\cmark & 2.4\cmark & 2.3\cmark \\
-& 15 & 2.9\cmark & 3.6\cmark & 5.0\cmark & 8.0\cmark & 11.2\cmark & 19.6\cmark & 33.9\cmark & 74.8\cmark & 130.9\cmark \\
-& 20 & 6.6\cmark & 15.5\cmark & 14.4\cmark & 17.7\cmark & 77.7\cmark & 86.2\cmark & 183.5\cmark & 504.3\cmark & 1516.6\cmark \\
-& 25 & 10.3\cmark & 17.8\cmark & 22.9\cmark & 45.5\cmark & 151.4\cmark & 2482.6\cmark & 2406.0\cmark & 6578.4\cmark & $-$ \\
-& 30 & 27.5\cmark & 26.2\cmark & 33.9\cmark & 56.0\cmark & 67.0\cmark & 217.1\cmark & 1717.2\cmark & 291.6\cmark & 462.5\cmark \\
+\multirow{5}{1em}{\rotatebox{90}{\textbf{live-four\ }}}
+& \textbf{10} & 1.2\cmark & 1.3\cmark & 1.5\cmark & 1.7\cmark & 1.9\cmark & 2.1\cmark & 2.1\cmark & 2.4\cmark & 2.3\cmark \\
+& \textbf{15} & 2.9\cmark & 3.6\cmark & 5.0\cmark & 8.0\cmark & 11.2\cmark & 19.6\cmark & 33.9\cmark & 74.8\cmark & 130.9\cmark \\
+& \textbf{20} & 6.6\cmark & 15.5\cmark & 14.4\cmark & 17.7\cmark & 77.7\cmark & 86.2\cmark & 183.5\cmark & 504.3\cmark & 1516.6\cmark \\
+& \textbf{25} & 10.3\cmark & 17.8\cmark & 22.9\cmark & 45.5\cmark & 151.4\cmark & 2482.6\cmark & 2406.0\cmark & 6578.4\cmark & $-$ \\
+& \textbf{30} & 27.5\cmark & 26.2\cmark & 33.9\cmark & 56.0\cmark & 67.0\cmark & 217.1\cmark & 1717.2\cmark & 291.6\cmark & 462.5\cmark \\
 \midrule
-\multirow{5}{1em}{\rotatebox{90}{\textbf{live-five}}}
-& 10 & 1.1\xmark & 1.3\xmark & 1.9\xmark & 1.8\xmark & 5.4\xmark & 13.7\cmark & 24.0\cmark & 22.9\cmark & 23.7\cmark \\
-& 15 & 1.3\xmark & 1.7\xmark & 2.5\xmark & 2.3\xmark & 5.3\xmark & 5.7\xmark & 20.3\xmark & $-$& 36.8\xmark \\
-& 20 & 1.7\xmark & 2.2\xmark & 2.6\xmark & 5.2\xmark & 8.6\xmark & 15.2\xmark & 29.8\xmark & 71.2\xmark & $-$ \\
-& 25 & 2.1\xmark & 3.6\xmark & 4.4\xmark & 13.5\xmark & 10.6\xmark & 17.2\xmark & 781.3\xmark & 816.1\xmark & 569.4\xmark \\
-& 30 & 2.2\xmark & 6.9\xmark & 5.6\xmark & 14.9\xmark & 21.1\xmark & 26.7\xmark & 28.8\xmark & 140.6\xmark & 238.6\xmark \\
+\multirow{5}{1em}{\rotatebox{90}{\textbf{live-five\ }}}
+& \textbf{10} & 1.1\xmark & 1.3\xmark & 1.9\xmark & 1.8\xmark & 5.4\xmark & 13.7\cmark & 24.0\cmark & 22.9\cmark & 23.7\cmark \\
+& \textbf{15} & 1.3\xmark & 1.7\xmark & 2.5\xmark & 2.3\xmark & 5.3\xmark & 5.7\xmark & 20.3\xmark & $-$& 36.8\xmark \\
+& \textbf{20} & 1.7\xmark & 2.2\xmark & 2.6\xmark & 5.2\xmark & 8.6\xmark & 15.2\xmark & 29.8\xmark & 71.2\xmark & $-$ \\
+& \textbf{25} & 2.1\xmark & 3.6\xmark & 4.4\xmark & 13.5\xmark & 10.6\xmark & 17.2\xmark & 781.3\xmark & 816.1\xmark & 569.4\xmark \\
+& \textbf{30} & 2.2\xmark & 6.9\xmark & 5.6\xmark & 14.9\xmark & 21.1\xmark & 26.7\xmark & 28.8\xmark & 140.6\xmark & 238.6\xmark \\
 \midrule
-\multirow{5}{1em}{\rotatebox{90}{\textbf{live-six}}}
-& 10 & 0.9\cmark & 1.1\cmark & 1.9\cmark & 2.5\cmark & 3.1\cmark & 4.7\cmark & 10.1\cmark & 7.9\cmark & 16.2\cmark \\
-& 15 & 1.0\cmark & 1.8\cmark & 4.4\cmark & 10.0\cmark & 33.9\cmark & 51.2\cmark & 84.0\cmark & 110.9\cmark & 191.5\cmark \\
-& 20 & 1.5\cmark & 3.9\cmark & 10.2\cmark & 21.6\cmark & 93.3\cmark & 234.8\cmark & 670.4\cmark & 1000.4\cmark & $-$ \\
-& 25 & 1.7\cmark & 8.9\cmark & 27.6\cmark & 83.5\cmark & 188.1\cmark & 596.2\cmark & 2469.2\cmark & 5365.0\cmark & $-$ \\
-& 30 & 2.5\cmark & 16.3\cmark & 54.4\cmark & 263.4\cmark & 993.9\cmark & 3354.1\cmark & $-$ & $-$ & $-$ \\
+\multirow{5}{1em}{\rotatebox{90}{\textbf{live-six\ \ }}}
+& \textbf{10} & 0.9\cmark & 1.1\cmark & 1.9\cmark & 2.5\cmark & 3.1\cmark & 4.7\cmark & 10.1\cmark & 7.9\cmark & 16.2\cmark \\
+& \textbf{15} & 1.0\cmark & 1.8\cmark & 4.4\cmark & 10.0\cmark & 33.9\cmark & 51.2\cmark & 84.0\cmark & 110.9\cmark & 191.5\cmark \\
+& \textbf{20} & 1.5\cmark & 3.9\cmark & 10.2\cmark & 21.6\cmark & 93.3\cmark & 234.8\cmark & 670.4\cmark & 1000.4\cmark & $-$ \\
+& \textbf{25} & 1.7\cmark & 8.9\cmark & 27.6\cmark & 83.5\cmark & 188.1\cmark & 596.2\cmark & 2469.2\cmark & 5365.0\cmark & $-$ \\
+& \textbf{30} & 2.5\cmark & 16.3\cmark & 54.4\cmark & 263.4\cmark & 993.9\cmark & 3354.1\cmark & $-$ & $-$ & $-$ \\
 
 \end{tabular}
 \end{table}
@@ -2025,15 +2039,15 @@ at the same time.
   indicates the property is satisfied, a \xmark\ indicates that a counterexample
   was found. Blank entries indicate no result after two hours.}
 \label{table:fischer-results-ta2smt}
-\begin{tabular}{c|c|r r r r r r r r r}
+\begin{tabular}{c c r r r r r r r r r}
 \midrule
 \multicolumn{11}{c}{TACK ta2smt} \\
 \midrule
 \multicolumn{11}{c}{\(n\)} \\
 \midrule
-& k & 2 & 3 & 4 & 5 & 6 & 7 & 8 & 9 & 10 \\
+& k & \multicolumn{1}{c}{\textbf{2}} & \multicolumn{1}{c}{\textbf{3}} & \multicolumn{1}{c}{\textbf{4}} & \multicolumn{1}{c}{\textbf{5}} & \multicolumn{1}{c}{\textbf{6}} & \multicolumn{1}{c}{\textbf{7}} & \multicolumn{1}{c}{\textbf{8}} & \multicolumn{1}{c}{\textbf{9}} & \multicolumn{1}{c}{\textbf{10}} \\
 \midrule
-\multirow{5}{1em}{\rotatebox{90}{\textbf{live-one}}}
+\multirow{5}{1em}{\rotatebox{90}{\textbf{live-one\ }}}
  & \textbf{10} & 0.8\cmark & 0.9\cmark & 0.9\cmark & 1.0\cmark & 1.0\cmark & 1.2\cmark & 1.1\cmark & 1.0\cmark & 1.2\cmark \\
  & \textbf{15} & 0.8\cmark & 0.9\cmark & 1.0\cmark & 1.0\cmark & 1.1\cmark & 1.2\cmark & 1.2\cmark & 1.2\cmark & 1.3\cmark \\
  & \textbf{20} & 0.9\cmark & 1.0\cmark & 1.1\cmark & 1.2\cmark & 1.2\cmark & 1.5\cmark & 1.6\cmark & 1.5\cmark & 1.4\cmark \\
@@ -2041,7 +2055,7 @@ at the same time.
  & \textbf{30} & 1.1\cmark & 1.1\cmark & 1.3\cmark & 1.3\cmark & 2.2\cmark & 2.3\cmark & 1.8\cmark & 2.1\cmark & 2.3\cmark \\
   \midrule
   % TODO: other properties
-\multirow{5}{1em}{\rotatebox{90}{\textbf{live-two}}}
+\multirow{5}{1em}{\rotatebox{90}{\textbf{live-two\ }}}
   & \textbf{10} & 1.6\cmark & 1.8\cmark & 1.8\cmark & 2.5\cmark & 3.0\cmark & 3.5\cmark & 3.0\cmark & 4.3\cmark & 4.0\cmark \\
   & \textbf{15} & 4.8\cmark & 5.3\cmark & 6.6\cmark & 6.0\cmark & 9.1\cmark & 12.4\cmark & 34.5\cmark & 28.6\cmark & 229.7\cmark \\
   & \textbf{20} & 10.2\cmark & 13.2\cmark & 14.4\cmark & 21.6\cmark & 27.4\cmark & 28.8\cmark & 61.2\cmark & 72.3\cmark & 108.6\cmark \\
@@ -2057,7 +2071,7 @@ at the same time.
   & \textbf{30} & 1.9\xmark & 4.6\xmark & 5.9\xmark & 9.9\xmark & 17.3\xmark & 32.3\xmark & 37.4\xmark & 73.2\xmark & 93.2\xmark \\
   \midrule
 
-\multirow{5}{*}{\rotatebox[origin=c]{90}{\textbf{live-four}}}
+\multirow{5}{*}{\rotatebox[origin=c]{90}{\textbf{live-four\ }}}
   & \textbf{10} & 1.2\cmark & 1.4\cmark & 1.6\cmark & 2.2\cmark & 2.1\cmark & 2.4\cmark & 2.9\cmark & 2.5\cmark & 2.7\cmark \\
   & \textbf{15} & 2.5\cmark & 3.2\cmark & 4.2\cmark & 4.9\cmark & 6.1\cmark & 9.0\cmark & 10.6\cmark & 26.7\cmark & 287.2\cmark \\
   & \textbf{20} & 6.1\cmark & 6.1\cmark & 7.3\cmark & 12.9\cmark & 13.8\cmark & 20.7\cmark & 30.0\cmark & 30.9\cmark & 56.9\cmark \\
@@ -2065,7 +2079,7 @@ at the same time.
   & \textbf{30} & 41.8\cmark & 21.8\cmark & 37.7\cmark & 44.2\cmark & 69.9\cmark & 67.7\cmark & 133.5\cmark & 156.4\cmark & 161.0\cmark \\
   \midrule
 
-\multirow{5}{1em}{\rotatebox{90}{\textbf{live-five}}}
+\multirow{5}{1em}{\rotatebox{90}{\textbf{live-five\ }}}
   & \textbf{10} & 1.0\xmark & 1.3\xmark & 1.5\xmark & 4.2\xmark & 4.2\xmark & 17.2\cmark & 14.1\cmark & 19.1\cmark & 21.0\cmark \\
   & \textbf{15} & 1.1\xmark & 1.7\xmark & 2.5\xmark & 3.3\xmark & 5.2\xmark & 8.1\xmark & 18.0\xmark & 20.6\xmark & 29.1\xmark \\
   & \textbf{20} & 1.4\xmark & 3.1\xmark & 4.6\xmark & 7.4\xmark & 10.8\xmark & 16.9\xmark & 21.6\xmark & 22.0\xmark & 56.9\xmark \\
@@ -2073,7 +2087,7 @@ at the same time.
   & \textbf{30} & 2.5\xmark & 11.1\xmark & 8.9\xmark & 20.0\xmark & 22.8\xmark & 39.4\xmark & 66.0\xmark & 80.0\xmark & 116.7\xmark \\
   \midrule
 
-\multirow{5}{*}{\rotatebox[origin=c]{90}{\textbf{live-six}}}
+\multirow{5}{*}{\rotatebox[origin=c]{90}{\textbf{live-six\ \ }}}
   & \textbf{10} & 1.0\cmark & 1.4\cmark & 2.2\cmark & 6.4\cmark & 13.1\cmark & 32.9\cmark & 27.1\cmark & 14.2\cmark & 15.0\cmark \\
   & \textbf{15} & 1.3\cmark & 3.0\cmark & 9.5\cmark & 24.4\cmark & 61.4\cmark & 95.7\cmark & 170.8\cmark & 346.7\cmark & 543.9\cmark \\
   & \textbf{20} & 1.5\cmark & 8.2\cmark & 53.6\cmark & 141.8\cmark & 368.0\cmark & 756.6\cmark & 1896.7\cmark & 2808.3\cmark & 6662.7\cmark \\
@@ -2088,6 +2102,11 @@ at the same time.
   \caption{Average Speedup Achieved by Different Liveness Properties}
   \label{fig:speedup}
   \includegraphics[width=1.0\textwidth]{speedup}
+
+  For a given liveness property and bound, the geometric mean of the speedup is
+  computed over the nine different model sizes. An asterisk (*) indicates that
+  at least one solver did not terminate within the time limit for two or more of
+  the nine runs, and so an accurate mean cannot be computed.
 \end{figure}
 
 As we can see, the results printed in Tables~\ref{table:fischer-results-aez}
@@ -2095,37 +2114,51 @@ and~\ref{table:fischer-results-ta2smt} show the difficulty curves for each
 problem, as both solvers take considerably more time to solve problems with
 larger bounds and with a larger number of TA in the network. To better visualize
 these results, we have condensed the tables above into Figure~\ref{fig:speedup},
-which computes the average speedup for a given property and bound. The speedup
-is defined as the time taken by \aez divided by the time taken by ta2smt. A
-speedup of 1 indicates that both times are equivalent, values larger than one
-(resp.\ less than one) represents a faster time by ta2smt (resp. \aez). The
-speedup can only be calculated when both algorithms terminate within the given
-time limit of two hours. When at least one algorithm does not terminate for a
-given number of TA, that run is excluded from the average. While this usually
-does not significantly impact the average, property live-two with bound 30, as
-well as live-six with bounds of 25 and 30 have three or more runs excluded from
-the average, and as a result the average may be significantly skewed. This is
-because there is a clear trend, at least across the first five properties, where
-the ta2smt algorithm clearly scales better to handle both more agents and larger
-bounds. This means that when multiple runs with large numbers of agents are
-excluded, as is the case in the three examples mentioned, the average is heavily
-weighted towards runs with fewer agents, favoring \aez. The most striking
-example of this trend is Live-two, where with a bound of 10, both algorithms'
-performances are roughly equivalent, whereas with a bound of 30 the ta2smt
-algorithm quickly becomes over an order of magnitude faster than the \aez\
-encoding.
+which computes the average (geometric mean) speedup for a given property and
+bound. The speedup is defined as the time taken by \aez\ divided by the time
+taken by ta2smt. A speedup of 1 indicates that both times are equivalent, values
+larger than one (resp.\ less than one) represent a faster time by ta2smt (resp.
+\aez). The speedup can only be calculated when both algorithms terminate within
+the given time limit of two hours. When at least one algorithm does not
+terminate for a given number of TA, that run is excluded from the average. While
+this usually does not significantly impact the average, property live-two with
+bound thirty, as well as live-six with bounds of twenty-five and thirty have
+three or more runs excluded from the average, and as a result we have omitted
+these averages from the chart. This is because there is a clear trend, at least
+across the first five properties, where the ta2smt algorithm clearly scales
+better to handle both more agents and larger bounds. This means that when
+multiple runs with large numbers of agents are excluded, as is the case in the
+three examples mentioned, the average is heavily weighted towards runs with
+fewer agents, favoring \aez. The most striking example of this trend is
+Live-two, where with two agents, both algorithms' performances are roughly
+equivalent, whereas with ten agents the ta2smt algorithm quickly becomes over an
+order of magnitude faster than the \aez\ encoding.
 
-The one property that does not fit this trend is Live-six, where the ta2smt
-algorithm's performance ranges from equivalent to worse than the \aez\
+The averages shown above are an average of the performance over the nine model
+sizes, and we believe it is in fact a rather pessimistic assessment of the
+ta2smt algorithm. Because ta2smt exhibits superior scaling to larger models and
+bounds, if larger models and higher bounds were to be added to the results, we
+expect that the results would be even more favorable to ta2smt. An interesting
+exception to this trend seems to be the bound of thirty, where ta2smt exhibits a
+lower speedup than with a bound of twenty-five. After consulting the tables we
+highly suspect that this is due to a quirk of \aez, where the results with a
+bound of thirty are slightly better than with a bound of twenty-five for several
+problems. We are not sure as to the cause of this strange phenomenon, but we do
+not expect this to repeat at higher bounds.
+
+The one property that does not fit the general trend is Live-six, where the
+ta2smt algorithm's performance ranges from equivalent to worse than the \aez\
 algorithm. This property is unique in that the MITL property to be verified
 grows in size with the number of TA in the network. It is possible that at
 larger sizes, the MITL encoding becomes a bottleneck that limits the utility of
-further TA optimizations. It is also possibile that live-six is an extension of
-the varying results seen in the other tests. It is possibe that both ta2smt and
-\aez have problems where they excel.
+further TA optimizations. It is also possibile that due to the additional
+complexity of live-six, higher bounds are needed to offset the possible higher
+initial costs of ta2smt and reap the benefits of ta2smt's superior scaling. We
+believe that further tests with a longer timeout are needed to understand these
+results.
 
 Another result that may seem unusual is the behavior seen in live-three and
-live-five with a bound of 10. Both algorithms are unable to find a
+live-five with a bound of ten. Both algorithms are unable to find a
 counterexample for networks with seven or more processes. This is in fact an
 artifact of the strong transition liveness. Because each TA must transition
 during the loop section of the trace, they must all move to state $b$ from the
@@ -2136,9 +2169,9 @@ individually, as the transition from $b$ to $c$ assigns the process id to the
 variable $id$. Thus with a large number of processes and a small bound, it is
 impossible for every process to complete this path from $b$ to $c$ and then back
 to $b$, and thus no valid lasso-shaped traces (with strong transition liveness)
-exist. Although not shown in the table, with a bound of $11$ there exists a
-valid trace for a 7-process network, with a bound of $12$ there exists a valid
-trace for 8 processes, and so on.
+exist. Although not shown in the table, with a bound of eleven there exists a
+valid trace for a seven-process network, with a bound of twelve there exists a
+valid trace for eight processes, and so on.
 
 \section{Token Ring}\label{evaluation-token}
 
@@ -2217,16 +2250,16 @@ Table~\ref{table:token-results} contains the results of the token ring tests.
 Although the time taken is not as large as the Fischer tests, we can still see a
 clear pattern emerge. We used this test as an opportunity to extend the maximum
 time bound used, and as shown above the general trend of ta2smt scaling more
-efficiently than \aez\ continues past a bound of 30. Although the initial
-results with a bound of 10 are practically equivalent, by the time we reach a
-bound of 40 ta2smt starts to perform at least three times faster than \aez.
+efficiently than \aez\ continues past a bound of thirty. Although the initial
+results with a bound of ten are practically equivalent, by the time we reach a
+bound of forty ta2smt starts to perform at least three times faster than \aez.
 
 \section{CSMA/CD}\label{evaluation-csma}
 
 The CSMA/CD (Carrier Sense Multiple Access/Collision Detection) protocol is a
 well known protocol for allowing multiple agents to share a communication
 channel, and was popularized by its inclusion in the Ethernet standard. The
-protocol includes 1 process to manage a shared communication bus, as well as a
+protocol includes one process to manage a shared communication bus, as well as a
 number of processes that wish to obtain exclusive access to the bus in order to
 send a message. When two processes attempt to send at the same time, the bus
 process detects the collision and uses the broadcast synchronization primitive
@@ -2391,7 +2424,7 @@ we retain TACK's approach of encoding MITL properties to be verified over the
 network, while creating a more efficient model for the encoding of the network
 itself. Rather than encode the TA network into \cltloc, we directly translate
 the network terms and constraints into a combination of BitVector and
-real-valued logic, written in the standard SMT-LIB2 language. One of the
+real-valued logic, written in the standard SMT-LIB language. One of the
 original motivations for using \cltloc\ as an intermediate representation in
 TACK was to create a common language that was both feasible to translate into
 SMT form and expressive enough to easily support the encoding of additional
@@ -2424,15 +2457,15 @@ space, with the speedup increasing with the problem size.
 
 \section{Future Work}
 
-One potential future research direction is to similarly improve the encoding of
-the MITL property files into BitVector logic. As seen in the TACK results, the
-speedup achieved by our tool was weakest when the MITL property was the largest,
-namely during the tests of Fischer liveness property six. Another benefit to
-this re-implementation would be the potential inclusion of finite traces (albeit
-with restrictions on the properties supported). This can be supported in the TA
-encoding by disabling the loop constraints or making them conditional on a
-`loop-exists' variable, however modifications to the MITL encoding would be
-necessary to make this extension useful.
+One potential future research direction is to similarly implement the encoding
+of the MITL property files directly into BitVector logic. As seen in the TACK
+results, the speedup achieved by our tool was weakest when the MITL property was
+the largest, namely during the tests of Fischer liveness property six. Another
+benefit to this re-implementation would be the potential inclusion of finite
+traces (albeit with restrictions on the properties supported). This can be
+supported in the TA encoding by disabling the loop constraints or making them
+conditional on a `loop-exists' variable, however modifications to the MITL
+encoding would be necessary to make this extension useful.
 
 In addition to future research, there are also opportunities to add additional
 ease-of-use features to TACK\@. One such feature that could be added is support
@@ -2441,7 +2474,7 @@ value outside of their bounds. Currently our BitVector implementation simply
 allows variables to overflow, considering the burden of verifying the bounds to
 fall on the user. However it would be relatively straightforward to increase the
 size of the variable BitVectors so that all possible illegal assignments are
-guarenteed to not overflow, and to then create a custom MITL property that
+guaranteed to not overflow, and to then create a custom MITL property that
 asserts that the variable never leaves its given bounds. Users could then check
 to see if their bounds were in fact correct, and receive a trace showing the
 violation if one existed.
