@@ -44,16 +44,19 @@
 \title{Improved Verification of Networks of Timed Automata}
   \input{./frontpage/frontpage.tex}
 
-\section*{Acknowledgements}
+%\section*{Acknowledgments}
+\newpage
 \thispagestyle{empty}
-\vspace{1cm}
+\vspace{1.0cm}
 \begin{center}
   \mbox{\parbox{10cm}{\centering Many thanks to my supervisors for their
-      guidance and many insightful comments, and to my family for all of their
-      support. \vspace{1cm}
+      guidance and insightful comments, and a special thank you to my family for
+      all of their love and support.
 
-      Special thanks to my friends for keeping me company during the long
-      quarantine from the other side of the Atlantic Ocean. }}
+      \vspace{1cm}
+
+      And to my friends, thank you for keeping me company online during the long
+      months of quarantine. }}
 \end{center}
 
 \clearpage
@@ -439,12 +442,6 @@ clocks used by the specific timed automaton \(\mathcal{A}_{i} \in \mathcal{A}\).
 
 \section{Bounded Model Checking}\label{bounded-sat}
 
-% TODO: define trace, create graphic showing trace progression
-%       define liveness, 2 types of edges
-%       (cut and paste existing sections on this topic from later sections)
-%       then move on to the TACK section
-%
-
 Bounded Model Checking~\cite{bouyer09} refers to the problem of evaluating if a
 given network of timed automata satisfies a given model, or property. To perform
 this evaluation, the TA network along with the property to be evaluated are
@@ -775,7 +772,6 @@ initial state as \(0\). The second formula initializes each variable
 \(n \in Int\) to its initial value, and the third ensures that the invariants of
 each initial state hold in the initial position.
 
-% TODO: clocks?
 Formulas 4 and 5 are the clock constraints, and describe how the active value of
 the clock evolves throughout the trace. To both test the value of a clock and
 simultaneously reset the value during a transition, TACK has used two clock
@@ -848,7 +844,7 @@ an automaton not included in the set $S$ performs a sync on $\alpha$.
 examples in which at least one Timed Automata performed a non-null (or discrete)
 transition at every position in the trace. It seems natural to require at least
 one discrete transition in each position, because otherwise the state of the
-network would not change, and we could simply remove the unneccessary duplicate
+network would not change, and we could simply remove the unnecessary duplicate
 position from the trace. Unfortunately the addition of MITL properties makes
 this a bit more complex. Consider the MITL property
 $\mathcal{G}_{[0,\infty)} \neg(\mathcal{G}_{[0,10]}\ \alpha)$, where $\alpha$ is
@@ -897,7 +893,6 @@ Liveness is defined in the TACK paper, it is not implemented in the TACK tool.
 It requires that at every position \emph{at least one} timed automaton will
 eventually perform a discrete transition. Finally the Unrestricted Liveness
 option places no restrictions on TA liveness.
-%todo liveness background?
 
 \begin{table}[h]
   \centering
@@ -1071,7 +1066,7 @@ length \(k+2\) to represent the active transition of the TA over time.
 Table~\ref{table:compact-bv} shows how these BitVectors are constructed to represent
 the active transition of a single timed automaton. To reconstruct a BitVector
 whose bits have the value of 1 iff a given transition $t$ is active, \aez\
-combines the multiple transition bitvectors in a unique fashion to represent a
+combines the multiple transition BitVectors in a unique fashion to represent a
 specific transition. As an example, consider a transition $t \in T_{i}$ that has
 been encoded as the number $1$. Since the binary representation of $1$ is
 $\overleftarrow{00\ldots}001$, to create the BitVector for transition $t$ \aez\
@@ -1611,24 +1606,25 @@ relation.
 \subsection{Sync}
 \begin{table}
   \centering
-\begin{tabular}{c}
-Sync Constraints \\
-\(\phi_{14} := \underset{t \in T: t_\epsilon = \alpha!}{\BitAnd} \overleftarrow{trans_t} \Rightarrow (\neg \underset{t'_\epsilon\in \{\alpha!,\alpha\#\}}{\underset{t' \in \{T \backslash t\}: }{\BitOr}} \overleftarrow{trans_{t'}}) \land (\underset{t' \in T: t_\epsilon = \alpha?}{\BitOr} \overleftarrow{trans_{t'}} )\)
+\begin{tabular}{c c}
+\multicolumn{2}{c}{Sync Constraints} \\
+\midrule
+\(\phi_{14} := \)&\( \underset{t \in T: t_\epsilon = \alpha!}{\BitAnd} \overleftarrow{trans_t} \Rightarrow (\neg \underset{t'_\epsilon\in \{\alpha!,\alpha\#\}}{\underset{t' \in \{T \backslash t\}: }{\BitOr}} \overleftarrow{trans_{t'}}) \land (\underset{t' \in T: t_\epsilon = \alpha?}{\BitOr} \overleftarrow{trans_{t'}} )\)
   \\
 \midrule
-\(\phi_{15} := \underset{t \in T_{i}: t_\epsilon = \alpha?}{\underset{i \in [1,N]}{\BitAnd}} \overleftarrow{trans_t} \Rightarrow (\neg \underset{t_\epsilon = \alpha?}{\underset{t' \in \{T\backslash t\}:}{\BitOr}} \overleftarrow{trans_{t'}}) \land (\underset{t_\epsilon = a!}{\underset{t' \in T_{j}:}{\underset{j \in [1,N]}{\BitOr}}} \overleftarrow{trans_{t'}} \BitAnd (\overleftarrow{edge_{i}^{RC}} \Leftrightarrow \overleftarrow{edge_{j}^{RC}}))\)
+\(\phi_{15} := \)&\( \underset{t \in T_{i}: t_\epsilon = \alpha?}{\underset{i \in [1,N]}{\BitAnd}} \overleftarrow{trans_t} \Rightarrow (\neg \underset{t_\epsilon = \alpha?}{\underset{t' \in \{T\backslash t\}:}{\BitOr}} \overleftarrow{trans_{t'}}) \land (\underset{t_\epsilon = a!}{\underset{t' \in T_{j}:}{\underset{j \in [1,N]}{\BitOr}}} \overleftarrow{trans_{t'}} \BitAnd (\overleftarrow{edge_{i}^{RC}} \Leftrightarrow \overleftarrow{edge_{j}^{RC}}))\)
   \\
 \midrule
-\(\phi_{16} := \underset{t \in T:t_\epsilon = \alpha\#}{\BitAnd} \overleftarrow{trans_t} \Rightarrow \neg (\underset{t' \in T:t_\epsilon = \alpha\#\land t' \neq t}{\BitOr} \overleftarrow{trans_{t'}}) \) \\
+\(\phi_{16} := \)&\( \underset{t \in T:t_\epsilon = \alpha\#}{\BitAnd} \overleftarrow{trans_t} \Rightarrow \neg (\underset{t' \in T:t_\epsilon = \alpha\#\land t' \neq t}{\BitOr} \overleftarrow{trans_{t'}}) \) \\
 \midrule
-\(\phi_{17} := \underset{t \in T_{i}:t_\epsilon = \alpha @}{\underset{i \in [1,N]}{\BitAnd}} \overleftarrow{trans_t} \Rightarrow (\underset{t' \in T_{j}: t_\epsilon = \alpha\#}{\underset{j \in [1,N]}{\BitOr}} \overleftarrow{trans_{t'}} \BitAnd (\overleftarrow{edge_{i}^{RC}} \Leftrightarrow \overleftarrow{edge_{j}^{RC}})) \)
+\(\phi_{17} := \)&\( \underset{t \in T_{i}:t_\epsilon = \alpha @}{\underset{i \in [1,N]}{\BitAnd}} \overleftarrow{trans_t} \Rightarrow (\underset{t' \in T_{j}: t_\epsilon = \alpha\#}{\underset{j \in [1,N]}{\BitOr}} \overleftarrow{trans_{t'}} \BitAnd (\overleftarrow{edge_{i}^{RC}} \Leftrightarrow \overleftarrow{edge_{j}^{RC}})) \)
   \\
 \midrule
-\(\phi_{18} := \underset{\alpha \in Act}{\bigwedge}\ \underset{l \in [0,k+2]}{\underset{i \in [1,|\mathcal{A}|]}{\bigwedge}} (\underset{t_\epsilon = \alpha\#}{\underset{t \in T_i:}{\bigvee}} \overleftarrow{trans_t}^{[l]}) \rightarrow \) \\
-\((\underset{j \neq i}{\underset{j \in [1,k]:}{\bigwedge}} (\underset{t'_\epsilon = \alpha @}{\underset{t' \in T_j: }{\bigvee}} \overleftarrow{state_{t'_-}}^{[l]} \land \sigma_{\delta}(l,t'_{\gamma_{c}})  \land \mu(l,t_{\gamma_v})) \rightarrow \underset{t'_\epsilon = \alpha @}{\underset{t' \in T_j:}{\bigvee}} \overleftarrow{trans_{t'}}^{[l]}) \)
+\(\phi_{18} := \)&\( \underset{\alpha \in Act}{\bigwedge}\ \underset{l \in [0,k+2]}{\underset{i \in [1,|\mathcal{A}|]}{\bigwedge}} (\underset{t_\epsilon = \alpha\#}{\underset{t \in T_i:}{\bigvee}} \overleftarrow{trans_t}^{[l]}) \rightarrow \) \\
+& \((\underset{j \neq i}{\underset{j \in [1,k]:}{\bigwedge}} (\underset{t'_\epsilon = \alpha @}{\underset{t' \in T_j: }{\bigvee}} \overleftarrow{state_{t'_-}}^{[l]} \land \sigma_{\delta}(l,t'_{\gamma_{c}})  \land \mu(l,t_{\gamma_v})) \rightarrow \underset{t'_\epsilon = \alpha @}{\underset{t' \in T_j:}{\bigvee}} \overleftarrow{trans_{t'}}^{[l]}) \)
   \\
 \midrule
-\(\phi_{sync} := (\phi_{14} \BitAnd \phi_{15} \BitAnd \phi_{16} \BitAnd \phi_{17} =\ \BitNeg \overleftarrow{0} ) \land \phi_{18} \)
+\(\phi_{sync} := \)&\( (\phi_{14} \BitAnd \phi_{15} \BitAnd \phi_{16} \BitAnd \phi_{17} =\ \BitNeg \overleftarrow{0} ) \land \phi_{18} \)
 
 \end{tabular}
 \caption{Synchronization Constraints for a network of timed automata}
@@ -1695,25 +1691,26 @@ $\alpha @$.
 \subsection{Loop Constraints}\label{constraints-loop}
 
 \begin{table}
-\begin{tabular}{c}
-Loop Constraints \\
+\centering
+\begin{tabular}{c c}
+\multicolumn{2}{c}{Loop Constraints} \\
 \midrule
-\(\phi_{19} := \underset{i \in [1,N]}{\bigwedge}\ (\overleftarrow{edge_{i}^{RC}}^{[k{+}1]} = \overleftarrow{edge_{i}^{RC}}^{[loop]}) \land \underset{j \in [1,\lceil\log_2 |\mathcal{T}_i|\rceil]}{\bigwedge} \overleftarrow{tb_{i,j}}^{[k+1]} = \overleftarrow{tb_{i,j}}^{[loop]}\)
+\(\phi_{19} := \)&\( \underset{i \in [1,N]}{\bigwedge}\ (\overleftarrow{edge_{i}^{RC}}^{[k{+}1]} = \overleftarrow{edge_{i}^{RC}}^{[loop]}) \land \underset{j \in [1,\lceil\log_2 |\mathcal{T}_i|\rceil]}{\bigwedge} \overleftarrow{tb_{i,j}}^{[k+1]} = \overleftarrow{tb_{i,j}}^{[loop]}\)
   \\
 \midrule
-\(\phi_{20} := \underset{n \in Int}{\bigwedge}\ \underset{j \in [1,\lambda(n)]}{\bigwedge} \overleftarrow{vb_{n,j}}^{[k+1]} = \overleftarrow{vb_{n,j}}^{[loop]}\) \\
+\(\phi_{20} := \)&\( \underset{n \in Int}{\bigwedge}\ \underset{j \in [1,\lambda(n)]}{\bigwedge} \overleftarrow{vb_{n,j}}^{[k+1]} = \overleftarrow{vb_{n,j}}^{[loop]}\) \\
 \midrule
-\(\phi_{21} := \underset{x \in X}{\bigwedge} (\lfloor x(k{+}1) \rfloor\ = \lfloor x(loop) \rfloor) \lor (\lfloor x(k{+}1) \rfloor\ > \max(x) \land \lfloor x(loop) \rfloor > \max(x)) \) \\
+\(\phi_{21} := \)&\( \underset{x \in X}{\bigwedge} (\lfloor x(k{+}1) \rfloor\ = \lfloor x(loop) \rfloor) \lor (\lfloor x(k{+}1) \rfloor\ > \max(x) \land \lfloor x(loop) \rfloor > \max(x)) \) \\
 \midrule
-\(\phi_{22} := \underset{x \in X}{\bigwedge} \lfloor x(loop) \rfloor \leq \max(x) \Rightarrow (frac(x(k{+}1)) = 0) \Leftrightarrow (frac(x(loop)) = 0)\) \\
+\(\phi_{22} := \)&\( \underset{x \in X}{\bigwedge} \lfloor x(loop) \rfloor \leq \max(x) \Rightarrow (frac(x(k{+}1)) = 0) \Leftrightarrow (frac(x(loop)) = 0)\) \\
 \midrule
-  \(\phi_{23} := \underset{x,x' \in X}{\bigwedge} (\lfloor x(loop) \rfloor \leq \max(x) \land \lfloor x'(loop) \rfloor \leq \max(x')) \rightarrow\) \\
-  \( \bigg( frac(x(k{+}1)) \leq frac(x'(k{+}1)) \leftrightarrow frac(x(loop)) \leq frac(x'(loop)) \bigg)\)
+  \(\phi_{23} := \)&\( \underset{x,x' \in X}{\bigwedge} (\lfloor x(loop) \rfloor \leq \max(x) \land \lfloor x'(loop) \rfloor \leq \max(x')) \rightarrow\) \\
+& \( \bigg( frac(x(k{+}1)) \leq frac(x'(k{+}1)) \leftrightarrow frac(x(loop)) \leq frac(x'(loop)) \bigg)\)
   \\
 \midrule
-\(\phi_{24} := \underset{x \in X}{\bigwedge} x(k) > \max(x) \lor (( \underset{t: x \in t_{a_c}}{\BitOr}\overleftarrow{trans_t}) \BitAnd \overleftarrow{inloop} \neq \overleftarrow{0})\) \\
+\(\phi_{24} := \)&\( \underset{x \in X}{\bigwedge} x(k) > \max(x) \lor (( \underset{t: x \in t_{a_c}}{\BitOr}\overleftarrow{trans_t}) \BitAnd \overleftarrow{inloop} \neq \overleftarrow{0})\) \\
 \midrule
-\(\phi_{loop} := \phi_{19} \land \phi_{20} \land \phi_{21} \land \phi_{22} \land \phi_{23} \land \phi_{24}\)
+\(\phi_{loop} := \)&\( \phi_{19} \land \phi_{20} \land \phi_{21} \land \phi_{22} \land \phi_{23} \land \phi_{24}\)
 \end{tabular}
 \caption{Loop Constraints for a network of timed automata}
 \label{table:constraints-loop}
@@ -2054,7 +2051,7 @@ at the same time.
  & \textbf{25} & 1.0\cmark & 1.0\cmark & 1.2\cmark & 1.2\cmark & 1.3\cmark & 1.5\cmark & 1.8\cmark & 1.7\cmark & 2.7\cmark \\
  & \textbf{30} & 1.1\cmark & 1.1\cmark & 1.3\cmark & 1.3\cmark & 2.2\cmark & 2.3\cmark & 1.8\cmark & 2.1\cmark & 2.3\cmark \\
   \midrule
-  % TODO: other properties
+
 \multirow{5}{1em}{\rotatebox{90}{\textbf{live-two\ }}}
   & \textbf{10} & 1.6\cmark & 1.8\cmark & 1.8\cmark & 2.5\cmark & 3.0\cmark & 3.5\cmark & 3.0\cmark & 4.3\cmark & 4.0\cmark \\
   & \textbf{15} & 4.8\cmark & 5.3\cmark & 6.6\cmark & 6.0\cmark & 9.1\cmark & 12.4\cmark & 34.5\cmark & 28.6\cmark & 229.7\cmark \\
